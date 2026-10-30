@@ -47,3 +47,17 @@ seção 7 da especificação:
 ```bash
 node contracts/check.mjs http://localhost:8000
 ```
+
+## Gerar o APK (10.7)
+
+Pré-requisito: Android Studio 2025.2.1+ (JDK 21 e SDK da API 36). Com `VITE_API_URL` apontando para o back:
+
+```bash
+cd app
+npm run build
+npx cap sync android
+npx cap open android
+```
+
+No Android Studio: Build › Generate Signed App Bundle or APK › APK. O keystore (`.jks`) e a senha nunca vão
+para o Git. O plugin nativo de captura (10.6) está em `app/android/app/src/main/java/br/com/minhascontas/app/capture`.

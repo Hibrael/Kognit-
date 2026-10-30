@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Minhas contas</string>
+    <string name="title_activity_main">Minhas contas</string>
+    <string name="package_name">br.com.minhascontas.app</string>
+    <string name="custom_url_scheme">br.com.minhascontas.app</string>
+</resources>

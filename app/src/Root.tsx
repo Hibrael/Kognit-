@@ -4,11 +4,12 @@ import { api, ApiError } from './lib/api'
 import { getToken, handleAuthReturn, onSessionChange, refreshSession, setToken } from './lib/session'
 import { Login } from './pages/Login'
 import { Welcome } from './pages/Welcome'
+import { listenAuthDeepLinks, openExternal as openPlatform } from './native/platform'
 
 type MeState = Omit<Me, 'household'> & { household: Me['household'] | null }
 
 /** Portão de entrada (10.3): login → "Bem-vindo" (sem casa) → app. */
-export function Root({ openExternal = (url: string) => location.assign(url) }: { openExternal?: (url: string) => void }) {
+export function Root({ openExternal = openPlatform }: { openExternal?: (url: string) => void }) {
   const [token, setTok] = useState(getToken())
   const [me, setMe] = useState<MeState | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -19,6 +20,7 @@ export function Root({ openExternal = (url: string) => location.assign(url) }: {
   // volta do link mágico ou do Google, e renovação do token ao abrir
   useEffect(() => {
     handleAuthReturn().then(msg => { if (msg) setMessage(msg) })
+    listenAuthDeepLinks(msg => { if (msg) setMessage(msg) })
     void refreshSession()
   }, [])
 

@@ -13,6 +13,8 @@ import { TxDialog } from './ui/TxDialog'
 import { HouseSection } from './ui/HouseSection'
 import { CategoryRulesSection, MercadoPagoSection, PluggySection } from './ui/IntegrationSections'
 import { SimilarDialog } from './ui/SimilarDialog'
+import { CaptureSection, InboxSection } from './ui/CaptureSections'
+import { startCaptureSync } from './native/captureSync'
 import { subscribeEvents } from './lib/session'
 
 export interface Me { email: string; name: string | null; household: { id: string; name: string; role: 'owner' | 'member' } }
@@ -85,6 +87,9 @@ export default function App({ me, onSignOut }: { me: Me; onSignOut: () => void }
   }, [refresh, toast])
 
   const go = useCallback((t: Tab) => { setTab(t); window.scrollTo({ top: 0 }) }, [setTab])
+
+  // APK: envia a fila de notificações capturadas ao abrir/voltar ao app (8.3)
+  useEffect(() => startCaptureSync(me.email), [me.email])
 
   // tempo real: outra pessoa (ou a sincronização) gravou → recarrega; avisos com "Desfazer" (8.7)
   useEffect(() => subscribeEvents({
@@ -178,6 +183,8 @@ export default function App({ me, onSignOut }: { me: Me; onSignOut: () => void }
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)}>
         {settingsOpen && <>
           <HouseSection role={me.household.role} onSignOut={onSignOut} />
+          <InboxSection />
+          <CaptureSection />
           <PluggySection />
           <MercadoPagoSection />
           <CategoryRulesSection />
