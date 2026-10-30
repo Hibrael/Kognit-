@@ -1,0 +1,724 @@
+{
+  "today": "2026-10-29",
+  "cur": "2026-10",
+  "balance": 796.35,
+  "varAvg": 68.69,
+  "includeVariable": false,
+  "rows": [
+    {
+      "k": "2026-10",
+      "in": 3419.38,
+      "out": 3043.03,
+      "net": 376.35,
+      "end": 796.35,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "realizado 05/10"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "realizado 10/10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "realizado 08/10"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "realizado 05/10"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 333.94,
+          "note": "realizado 06/10"
+        },
+        {
+          "type": "out",
+          "name": "Caixa · parcela",
+          "amount": 251.12,
+          "note": "realizado 20/10"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 148.37,
+          "note": "realizado 15/10"
+        },
+        {
+          "type": "out",
+          "name": "Santander · parcela",
+          "amount": 105,
+          "note": "realizado 20/10"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 96.2,
+          "note": "realizado 15/10"
+        },
+        {
+          "type": "in",
+          "name": "Pix recebido · venda",
+          "amount": 80,
+          "note": "realizado 25/10"
+        },
+        {
+          "type": "out",
+          "name": "Farmácia",
+          "amount": 42.9,
+          "note": "realizado 12/10"
+        },
+        {
+          "type": "out",
+          "name": "Padaria",
+          "amount": 23.5,
+          "note": "realizado 18/10"
+        }
+      ]
+    },
+    {
+      "k": "2026-11",
+      "in": 5027.37,
+      "out": 3150.86,
+      "net": 1876.51,
+      "end": 2672.86,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "in",
+          "name": "13º salário · 1ª parcela",
+          "amount": 1687.99,
+          "note": "previsto dia 30"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "previsto dia 10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "previsto dia 8"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 502.74,
+          "note": "previsto dia 6"
+        },
+        {
+          "type": "out",
+          "name": "Caixa",
+          "amount": 251.12,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 150,
+          "note": "previsto dia 15"
+        },
+        {
+          "type": "out",
+          "name": "Santander",
+          "amount": 105,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 100,
+          "note": "previsto dia 15"
+        }
+      ]
+    },
+    {
+      "k": "2026-12",
+      "in": 3339.38,
+      "out": 2877.06,
+      "net": 462.32,
+      "end": 3135.18,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "previsto dia 10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "previsto dia 8"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 333.94,
+          "note": "previsto dia 6"
+        },
+        {
+          "type": "out",
+          "name": "Caixa",
+          "amount": 251.12,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 150,
+          "note": "previsto dia 15"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 100,
+          "note": "previsto dia 15"
+        }
+      ]
+    },
+    {
+      "k": "2027-01",
+      "in": 3339.38,
+      "out": 3477.06,
+      "net": -137.68,
+      "end": 2997.5,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "previsto dia 10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "previsto dia 8"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "IPVA do carro",
+          "amount": 600,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 333.94,
+          "note": "previsto dia 6"
+        },
+        {
+          "type": "out",
+          "name": "Caixa",
+          "amount": 251.12,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 150,
+          "note": "previsto dia 15"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 100,
+          "note": "previsto dia 15"
+        }
+      ]
+    },
+    {
+      "k": "2027-02",
+      "in": 3339.38,
+      "out": 2877.06,
+      "net": 462.32,
+      "end": 3459.82,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "previsto dia 10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "previsto dia 8"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 333.94,
+          "note": "previsto dia 6"
+        },
+        {
+          "type": "out",
+          "name": "Caixa",
+          "amount": 251.12,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 150,
+          "note": "previsto dia 15"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 100,
+          "note": "previsto dia 15"
+        }
+      ]
+    },
+    {
+      "k": "2027-03",
+      "in": 3339.38,
+      "out": 2877.06,
+      "net": 462.32,
+      "end": 3922.14,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "previsto dia 10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "previsto dia 8"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 333.94,
+          "note": "previsto dia 6"
+        },
+        {
+          "type": "out",
+          "name": "Caixa",
+          "amount": 251.12,
+          "note": "previsto dia 20"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 150,
+          "note": "previsto dia 15"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 100,
+          "note": "previsto dia 15"
+        }
+      ]
+    },
+    {
+      "k": "2027-04",
+      "in": 3339.38,
+      "out": 2625.94,
+      "net": 713.44,
+      "end": 4635.58,
+      "varOut": 0,
+      "lines": [
+        {
+          "type": "in",
+          "name": "Salário Hibrael",
+          "amount": 2408.83,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Carro",
+          "amount": 1092,
+          "note": "previsto dia 10"
+        },
+        {
+          "type": "out",
+          "name": "Mercado Pago",
+          "amount": 950,
+          "note": "previsto dia 8"
+        },
+        {
+          "type": "in",
+          "name": "Salário Raiane",
+          "amount": 930.55,
+          "note": "previsto dia 5"
+        },
+        {
+          "type": "out",
+          "name": "Devolução 10%",
+          "amount": 333.94,
+          "note": "previsto dia 6"
+        },
+        {
+          "type": "out",
+          "name": "Luz",
+          "amount": 150,
+          "note": "previsto dia 15"
+        },
+        {
+          "type": "out",
+          "name": "Água",
+          "amount": 100,
+          "note": "previsto dia 15"
+        }
+      ]
+    }
+  ],
+  "base": {
+    "k": "2026-11",
+    "salary": 3339.38,
+    "fixed": 2982.06,
+    "net": 357.32
+  },
+  "recurring": [
+    {
+      "id": "39e9105d-b99c-46bd-974a-b3e12cffe2d3",
+      "type": "in",
+      "name": "Salário Hibrael",
+      "note": "",
+      "amount": 2408.83,
+      "gross": 2369.98,
+      "isSalary": true,
+      "tithe": false,
+      "formula": null,
+      "day": 5,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Salário",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 2408.83,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "433ff014-8c65-41de-bdf2-47422429aed1",
+      "type": "out",
+      "name": "Luz",
+      "note": "",
+      "amount": 150,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 15,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Contas da casa",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 150,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "5377bdba-bbf0-4fd3-bf07-b32bf7341ccb",
+      "type": "out",
+      "name": "Carro",
+      "note": "",
+      "amount": 1092,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 10,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Transporte",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 1092,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "7c87b5e3-8f24-4be2-8013-ec8745e517b0",
+      "type": "out",
+      "name": "Devolução 10%",
+      "note": "",
+      "amount": 0,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": "tithe",
+      "day": 6,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Devolução",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 333.94,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "953624c8-b130-421f-9efb-6047b4701d9b",
+      "type": "out",
+      "name": "Santander",
+      "note": "Parcelamento",
+      "amount": 105,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 20,
+      "freq": "parcelas",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": 2,
+      "category": "Parcelas",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "1 de 2 parcela restante · até Nov/26",
+      "displayAmount": 105,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "c9dec4b0-7651-4797-ac23-7542393de1c7",
+      "type": "in",
+      "name": "Salário Raiane",
+      "note": "",
+      "amount": 930.55,
+      "gross": 1006,
+      "isSalary": true,
+      "tithe": false,
+      "formula": null,
+      "day": 5,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Salário",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 930.55,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "d0439d00-a073-4c6c-baa4-4656a1b3bef7",
+      "type": "out",
+      "name": "Caixa",
+      "note": "Parcelamento sem juros",
+      "amount": 251.12,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 20,
+      "freq": "parcelas",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": 6,
+      "category": "Parcelas",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "5 de 6 parcelas restantes · até Mar/27",
+      "displayAmount": 251.12,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "d052b3a3-d467-45b6-b59f-5be4fde3dfaa",
+      "type": "in",
+      "name": "13º salário · 1ª parcela",
+      "note": "",
+      "amount": 0,
+      "gross": null,
+      "isSalary": false,
+      "tithe": true,
+      "formula": "decimo",
+      "day": 30,
+      "freq": "unica",
+      "startMonth": "2026-11",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Salário",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "só em Nov/26",
+      "displayAmount": 1687.99,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "d51022a4-f87b-4d13-be52-a25a4bf7688d",
+      "type": "out",
+      "name": "Água",
+      "note": "",
+      "amount": 100,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 15,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Contas da casa",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 100,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "dc000304-5462-401c-82a2-d6608d66240b",
+      "type": "out",
+      "name": "Mercado Pago",
+      "note": "Aporte · custo de vida",
+      "amount": 950,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 8,
+      "freq": "mensal",
+      "startMonth": "2026-10",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Mercado",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "todo mês",
+      "displayAmount": 950,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    },
+    {
+      "id": "eb355b48-e9fd-46d6-932c-28743bb2c5e3",
+      "type": "out",
+      "name": "IPVA do carro",
+      "note": "Estimativa",
+      "amount": 600,
+      "gross": null,
+      "isSalary": false,
+      "tithe": false,
+      "formula": null,
+      "day": 20,
+      "freq": "unica",
+      "startMonth": "2027-01",
+      "endMonth": null,
+      "parcels": null,
+      "category": "Transporte",
+      "matchKeywords": [],
+      "skipMonths": [],
+      "isSample": true,
+      "vigencia": "só em Jan/27",
+      "displayAmount": 600,
+      "ended": false,
+      "updatedAt": "2026-10-30T00:15:10.482935+00:00"
+    }
+  ],
+  "titheBase": "liquido"
+}

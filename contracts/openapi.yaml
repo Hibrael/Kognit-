@@ -1,0 +1,931 @@
+openapi: 3.1.0
+info:
+  title: Minhas contas · API
+  version: 1.0.0
+  description: |
+    Contrato entre o front (app/) e o back. Regras de negócio: docs/especificacao.html (seções 3, 5, 6 e 8).
+    Convenções, login e tempo real: docs/ARQUITETURA.md.
+
+    - JSON em camelCase; datas "AAAA-MM-DD"; meses "AAAA-MM"; dinheiro com até 2 casas, sempre positivo em `amount`.
+    - Em desenvolvimento toda rota aceita `?hoje=AAAA-MM-DD` (ou o cabeçalho `X-Hoje`) para simular o dia.
+    - Erros: `{ "error": "mensagem em português para o usuário", "field": "campo opcional" }`.
+    - Toda escrita responde `MutationResult` (aviso + token de desfazer opaco).
+servers:
+  - url: http://localhost:8000
+    description: desenvolvimento
+security:
+  - bearer: []
+
+tags:
+  - { name: auth, description: Login (RF-16, 10.3) }
+  - { name: casa, description: Casa compartilhada, convite, apagar conta (10.3, 16.10) }
+  - { name: telas, description: Telas calculadas pelo back (seções 4 e 6) }
+  - { name: escrita, description: Lançamentos, contas fixas, configurações, desfazer }
+  - { name: dados, description: Exportar/importar JSON, exemplos (16.4, 16.6) }
+  - { name: tempo-real, description: Server-Sent Events }
+  - { name: integracoes, description: Pluggy, Mercado Pago, regras de categoria (F4, seção 8) }
+  - { name: captura, description: Notificações do celular e "Para revisar" (F5, 8.3) }
+  - { name: csv, description: Importação de extrato CSV/XLSX (F6, 8.4) }
+
+paths:
+  # ------------------------------------------------------------------ auth
+  /api/auth/options:
+    get:
+      tags: [auth]
+      security: []
+      summary: Métodos de login disponíveis
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/AuthOptions' } } } }
+  /api/auth/magic-link:
+    post:
+      tags: [auth]
+      security: []
+      summary: Envia o link mágico por e-mail
+      description: |
+        Link: `https://<app>/?token=XYZ` (client=web) ou `minhascontas://auth?token=XYZ` (client=app).
+        403 "Este e-mail não tem acesso"; 429 "Muitas tentativas, tente em 1 hora".
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/EmailInput' } } } }
+      responses:
+        '200': { description: enviado, content: { application/json: { schema: { type: object, properties: { sent: { type: boolean } } } } } }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/auth/verify:
+    post:
+      tags: [auth]
+      security: []
+      summary: Troca o token do link mágico por um token de sessão
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TokenInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/auth/google/start:
+    get:
+      tags: [auth]
+      security: []
+      summary: Começa o login Google (o back faz o OAuth)
+      description: Ao final redireciona para `https://<app>/?code=XYZ` ou `minhascontas://auth?code=XYZ`; em erro, `?error=mensagem`.
+      parameters:
+        - { name: client, in: query, schema: { type: string, enum: [web, app] } }
+      responses:
+        '302': { description: redireciona para o Google }
+  /api/auth/exchange:
+    post:
+      tags: [auth]
+      security: []
+      summary: Troca o código de volta do Google por um token de sessão
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TokenInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/auth/dev:
+    post:
+      tags: [auth]
+      security: []
+      summary: Login só com o e-mail (apenas desenvolvimento)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/EmailInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { description: desligado (produção) }
+  /api/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Renova o token de sessão
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Error' }
+
+  # ------------------------------------------------------------------ casa
+  /api/me:
+    get:
+      tags: [casa]
+      summary: Usuário logado e sua casa (null = mostrar "Bem-vindo")
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+  /api/households:
+    post:
+      tags: [casa]
+      summary: Criar minha casa (o usuário vira dono)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/HouseholdInput' } } } }
+      responses:
+        '200': { description: criada, content: { application/json: { schema: { $ref: '#/components/schemas/IdOnly' } } } }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/households/join:
+    post:
+      tags: [casa]
+      summary: Entrar numa casa com o código de convite
+      description: 'Erros: "código inválido", "código já usado", "código expirado", "usuário já tem casa".'
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string } } } } } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/IdOnly' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/households/invite:
+    post:
+      tags: [casa]
+      summary: Gerar convite (só o dono; 8 caracteres de ABCDEFGHJKLMNPQRSTUVWXYZ23456789, vale 48 h)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Invite' } } } }
+        '403': { $ref: '#/components/responses/Error' }
+  /api/households/members:
+    get:
+      tags: [casa]
+      summary: Membros da casa
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Member' } } } } }
+  /api/account:
+    delete:
+      tags: [casa]
+      summary: Apagar minha conta e dados (16.10)
+      description: Único membro → apaga a casa. Senão sai da casa e passa o papel de dono ao outro.
+      responses:
+        '200': { description: apagada }
+
+  # ------------------------------------------------------------------ tempo real
+  /api/events:
+    get:
+      tags: [tempo-real]
+      security: []
+      summary: Server-Sent Events da casa
+      description: |
+        `text/event-stream`. Eventos `changed` (dados `{}`: recarregar a tela) e `notice`
+        (dados `{ "message": "...", "undo": UndoToken? }`: mostrar aviso). Comentário `: ping` a cada ~25 s.
+      parameters:
+        - { name: access_token, in: query, required: true, schema: { type: string }, description: token de sessão (EventSource não envia cabeçalhos) }
+      responses:
+        '200': { description: fluxo de eventos, content: { text/event-stream: { schema: { type: string } } } }
+        '401': { description: token inválido }
+
+  # ------------------------------------------------------------------ telas
+  /api/overview:
+    get:
+      tags: [telas]
+      summary: Visão geral (4.3, 6.6)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Overview' }, example: { $ref: './examples/overview.json' } } } }
+  /api/statement:
+    get:
+      tags: [telas]
+      summary: Extrato de um mês (RF-04 a RF-07)
+      description: |
+        `items`: lançamentos do mês e previstos (`prevsFor`, 6.3), já na ordem da RF-04 (dia decrescente;
+        no dia: lançamentos antes de previstos, entradas antes de saídas, created_at decrescente).
+        `dayBalances`: saldoAté(dia, com previstos) para TODOS os dias do mês; nunca filtrado.
+        `endBalance`: saldoAté(último dia do mês).
+      parameters:
+        - { name: month, in: query, required: true, schema: { type: string, example: '2026-10' } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Statement' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/projection:
+    get:
+      tags: [telas]
+      summary: Fixos e projeção (4.5, 6.5, 6.7, 6.8)
+      parameters:
+        - { name: variable, in: query, schema: { type: boolean }, description: incluir gastos variáveis (média) }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Projection' } } } }
+  /api/link-options:
+    get:
+      tags: [telas]
+      summary: Opções de "Referente a conta fixa" no diálogo de lançamento (4.6)
+      parameters:
+        - { name: type, in: query, required: true, schema: { $ref: '#/components/schemas/TxType' } }
+        - { name: date, in: query, required: true, schema: { type: string, format: date } }
+        - { name: txId, in: query, schema: { type: string }, description: lançamento em edição }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/LinkOption' } } } } }
+  /api/settings:
+    get:
+      tags: [telas]
+      summary: Configurações da casa (RF-14)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Settings' } } } }
+    put:
+      tags: [escrita]
+      summary: Alterar configurações (só os campos enviados)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SettingsInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/categories:
+    get:
+      tags: [telas]
+      summary: Categorias já usadas por tipo (além das padrão da 4.7)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: object, properties: { in: { type: array, items: { type: string } }, out: { type: array, items: { type: string } } } } } } }
+
+  # ------------------------------------------------------------------ escrita
+  /api/transactions:
+    post:
+      tags: [escrita]
+      summary: Novo lançamento ou confirmação de conta fixa (RF-01, RF-09)
+      description: '409 field=link "Esta conta já foi confirmada por outra pessoa" quando o par (conta, mês) já tem lançamento.'
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TxInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /api/transactions/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [escrita]
+      summary: Editar lançamento (marca user_edited / category_locked como o trigger da 5.2)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TxInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [escrita]
+      summary: Excluir (lógico, deleted_at)
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/transactions/{id}/not-transfer:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [escrita]
+      summary: '"Não é transferência" (8.2): desmarca is_transfer'
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/recurring:
+    post:
+      tags: [escrita]
+      summary: Nova conta fixa (RF-08; validações da 16.3)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RecurringInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/recurring/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [escrita]
+      summary: Editar conta fixa (vale para os meses ainda não confirmados)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RecurringInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '400': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [escrita]
+      summary: Excluir conta fixa (lançamentos vinculados perdem o vínculo)
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/recurring/{id}/change-from:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [escrita]
+      summary: '"Mudar a partir de…" (16.3): encerra no mês anterior e cria cópia com os novos valores'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [month, values]
+              properties:
+                month: { type: string, example: '2027-01' }
+                values: { $ref: '#/components/schemas/RecurringInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/recurring/{id}/skip:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [escrita]
+      summary: Ignorar a conta num mês (RF-10)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MonthInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/recurring/{id}/unskip:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [escrita]
+      summary: Restaurar mês ignorado
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MonthInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/undo:
+    post:
+      tags: [escrita]
+      summary: Desfazer uma ação (16.2). O corpo é o UndoToken recebido, sem alteração.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UndoToken' } } } }
+      responses:
+        '200': { description: desfeito, content: { application/json: { schema: { type: object, properties: { message: { type: string } } } } } }
+        '409': { description: '"Alterado por outra pessoa"', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  # ------------------------------------------------------------------ dados
+  /api/export:
+    get:
+      tags: [dados]
+      summary: 'Exportar JSON version 2 (16.4): { version, household, recurring, transactions, category_rules } com nomes de colunas do banco, sem raw'
+      responses:
+        '200': { description: arquivo, content: { application/json: { schema: { type: object } } } }
+  /api/import:
+    post:
+      tags: [dados]
+      summary: Importar JSON version 1 (protótipo, 5.1) ou 2. Substitui os dados da casa.
+      description: Com `dryRun=true` só conta o que será substituído, para a confirmação "Isto substitui N lançamentos e M contas fixas". Arquivo inválido → 400 "Arquivo não reconhecido".
+      parameters:
+        - { name: dryRun, in: query, schema: { type: boolean } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200':
+          description: 'dryRun: contagens; senão MutationResult'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/MutationResult'
+                  - type: object
+                    properties: { transactions: { type: integer }, recurring: { type: integer }, importTransactions: { type: integer }, importRecurring: { type: integer } }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/sample/clear:
+    post:
+      tags: [dados]
+      summary: Apagar lançamentos de exemplo; saldo inicial 0 em hoje (6.9)
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/sample/restore:
+    post:
+      tags: [dados]
+      summary: Restaurar o exemplo da 7.1 (só se a casa não tem dados próprios)
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  # ------------------------------------------------------------------ integrações (F4)
+  /api/pluggy/items:
+    get:
+      tags: [integracoes]
+      summary: Itens da Pluggy da casa (Configurações › Pluggy)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PluggyItem' } } } } }
+    post:
+      tags: [integracoes]
+      summary: Registrar um itemId do meu.pluggy.ai (pluggy-register-item); devolve as contas para escolher
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [itemId], properties: { itemId: { type: string } } } } } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/PluggyItem' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/pluggy/items/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [integracoes]
+      summary: Escolher as contas incluídas (vazio = todas BANK e CREDIT)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { accountIds: { type: array, items: { type: string } } } } } } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/PluggyItem' } } } }
+    delete:
+      tags: [integracoes]
+      summary: Remover item
+      responses:
+        '200': { description: removido }
+  /api/pluggy/sync-now:
+    post:
+      tags: [integracoes]
+      summary: '"Sincronizar agora" (no máximo 1 vez a cada 5 min; 429 "Aguarde alguns minutos")'
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/SyncResult' } } } }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/mp/accounts:
+    get:
+      tags: [integracoes]
+      summary: Contas Mercado Pago configuradas (8.9); vazio = seção oculta
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/MpAccount' } } } } }
+  /api/mp/import:
+    post:
+      tags: [integracoes]
+      summary: '"Importar histórico" (start) ou "Buscar relatórios prontos" (import)'
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [action], properties: { action: { type: string, enum: [start, import] } } } } } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/SyncResult' } } } }
+  /api/category-rules:
+    get:
+      tags: [integracoes]
+      summary: Regras de categoria (8.5)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/CategoryRule' } } } } }
+    post:
+      tags: [integracoes]
+      summary: Nova regra
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryRuleInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/category-rules/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [integracoes]
+      summary: Editar regra
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryRuleInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+    delete:
+      tags: [integracoes]
+      summary: Excluir regra
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/category-rules/apply-similar:
+    post:
+      tags: [integracoes]
+      summary: '"Aplicar a lançamentos parecidos" (8.5): cria regra description_contains prioridade 50 e recategoriza importados sem trava'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [matchValue, category]
+              properties: { matchValue: { type: string }, category: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+
+  # ------------------------------------------------------------------ captura (F5)
+  /api/captures:
+    post:
+      tags: [captura]
+      summary: Envio da fila de notificações do celular (8.3)
+      description: |
+        Idempotente por `hash` (capture_hash). Conforme households.capture_mode, vai para a caixa "Para revisar"
+        ('inbox') ou passa pelo parser ('parse'). `accepted` lista os hashes gravados ou já conhecidos; o app
+        remove esses da fila local (ack).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CaptureBatch' } } } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: object, properties: { accepted: { type: array, items: { type: string } }, created: { type: integer } } } } } }
+  /api/inbox:
+    get:
+      tags: [captura]
+      summary: Caixa "Para revisar" (RF-19)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [new, imported, ignored], default: new } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Inbox' } } } }
+  /api/inbox/{id}/ignore:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [captura]
+      summary: Ignorar item
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/inbox/{id}/resolve:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [captura]
+      summary: 'Avisos do servidor (8.6): "Transação removida pelo banco" → delete ou keep'
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [action], properties: { action: { type: string, enum: [delete, keep] } } } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/parser-rules:
+    get:
+      tags: [captura]
+      summary: Regras do parser (regex testada em título + " " + texto)
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ParserRule' } } } } }
+    post:
+      tags: [captura]
+      summary: Nova regra (regex inválida → 400)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ParserRuleInput' } } } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+  /api/parser-rules/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    delete:
+      tags: [captura]
+      summary: Excluir regra
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+
+  # ------------------------------------------------------------------ csv (F6)
+  /api/import/csv/preview:
+    post:
+      tags: [csv]
+      summary: Prévia da importação (8.4)
+      description: |
+        O front lê o arquivo (CSV com ";" ou "," ou XLSX) e manda cabeçalhos + linhas como texto.
+        O back detecta o relatório de Liberações (SOURCE_ID, RECORD_TYPE, NET_CREDIT_AMOUNT, NET_DEBIT_AMOUNT → 8.9;
+        pede `owner`), senão aplica o `mapping` (ou o salvo em households.csv_mapping se os cabeçalhos forem iguais).
+        Sem mapeamento possível → `needsMapping: true` e `lines` vazio.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CsvRequest' } } } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/CsvPreview' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/import/csv/commit:
+    post:
+      tags: [csv]
+      summary: Importa as linhas escolhidas (ingest_transaction, source=csv) e salva o mapeamento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/CsvRequest'
+                - type: object
+                  required: [selected]
+                  properties: { selected: { type: array, items: { type: integer }, description: '`n` das linhas marcadas' } }
+      responses:
+        '200': { $ref: '#/components/responses/Mutation' }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Error:
+      description: erro com mensagem para o usuário
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Mutation:
+      description: gravado
+      content: { application/json: { schema: { $ref: '#/components/schemas/MutationResult' } } }
+    Session:
+      description: token de sessão
+      content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string } } } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties: { error: { type: string }, field: { type: string } }
+    TxType: { type: string, enum: [in, out] }
+    Money: { type: number, multipleOf: 0.01 }
+    IdOnly: { type: object, properties: { id: { type: string, format: uuid } } }
+    UndoToken:
+      type: object
+      description: Opaco para o front. O back define o conteúdo; o front só guarda e devolve.
+      additionalProperties: true
+    MutationResult:
+      type: object
+      required: [message, undo]
+      properties:
+        message: { type: string, description: 'texto do aviso, ex.: "Saída de R$ 50,00 registrada"' }
+        undo: { $ref: '#/components/schemas/UndoToken' }
+        id: { type: string, format: uuid }
+
+    AuthOptions:
+      type: object
+      properties: { google: { type: boolean }, magicLink: { type: boolean }, dev: { type: boolean } }
+    EmailInput:
+      type: object
+      required: [email]
+      properties: { email: { type: string }, client: { type: string, enum: [web, app] } }
+    TokenInput: { type: object, required: [token], properties: { token: { type: string } } }
+    Me:
+      type: object
+      properties:
+        email: { type: string }
+        name: { type: [string, 'null'] }
+        household:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties: { id: { type: string }, name: { type: string }, role: { type: string, enum: [owner, member] } }
+    HouseholdInput:
+      type: object
+      properties: { name: { type: string }, openingDate: { type: string, format: date } }
+    Invite:
+      type: object
+      properties: { code: { type: string, example: K7M2QX9P }, expiresAt: { type: string, format: date-time } }
+    Member:
+      type: object
+      properties: { email: { type: string }, role: { type: string, enum: [owner, member] }, me: { type: boolean } }
+
+    Tx:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { $ref: '#/components/schemas/Money' }
+        description: { type: string }
+        category: { type: string }
+        recurringId: { type: [string, 'null'] }
+        recurringMonth: { type: [string, 'null'], example: '2026-10' }
+        recurringName: { type: [string, 'null'] }
+        isTransfer: { type: boolean, description: 'fica fora de saldo e totais (6.4); etiqueta "transferência"' }
+        isSample: { type: boolean }
+        source: { type: string, enum: [manual, pluggy, notification, csv] }
+        createdAt: { type: string, format: date-time }
+        beforeOpening: { type: boolean, description: 'data anterior ao saldo inicial: etiqueta "antes do saldo inicial", sem saldo do dia' }
+    Pending:
+      type: object
+      description: conta fixa prevista (6.3)
+      properties:
+        recurringId: { type: string }
+        k: { type: string, description: mês de referência }
+        name: { type: string }
+        category: { type: string }
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { $ref: '#/components/schemas/Money' }
+        due: { type: string, format: date }
+        date: { type: string, format: date, description: 'data efetiva (hoje, se atrasada)' }
+        overdue: { type: boolean }
+    Bill:
+      type: object
+      description: linha de "A pagar e a receber" (6.6)
+      properties:
+        recurringId: { type: string }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/TxType' }
+        category: { type: string }
+        k: { type: string }
+        due: { type: string, format: date }
+        amount: { $ref: '#/components/schemas/Money' }
+        overdue: { type: boolean }
+        dueToday: { type: boolean }
+        txId: { type: [string, 'null'], description: preenchido = confirmada }
+        txDate: { type: [string, 'null'], format: date }
+    Overview:
+      type: object
+      properties:
+        today: { type: string, format: date }
+        cur: { type: string }
+        balance: { $ref: '#/components/schemas/Money' }
+        endOfMonth: { $ref: '#/components/schemas/Money' }
+        monthIn: { $ref: '#/components/schemas/Money' }
+        monthOut: { $ref: '#/components/schemas/Money' }
+        nIn: { type: integer }
+        nOut: { type: integer }
+        toReceive: { $ref: '#/components/schemas/Money' }
+        toPay: { $ref: '#/components/schemas/Money' }
+        nextMonth: { type: string }
+        nextNet: { type: number, description: sobra do próximo mês, sem gastos variáveis }
+        bills: { type: array, items: { $ref: '#/components/schemas/Bill' } }
+        pOut: { $ref: '#/components/schemas/Money' }
+        pIn: { $ref: '#/components/schemas/Money' }
+        recent: { type: array, items: { $ref: '#/components/schemas/Tx' }, maxItems: 6 }
+        hasRecurring: { type: boolean }
+        hasSalary: { type: boolean }
+    StatementItem:
+      type: object
+      properties:
+        kind: { type: string, enum: [tx, prev] }
+        date: { type: string, format: date }
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { $ref: '#/components/schemas/Money' }
+        description: { type: string }
+        category: { type: string }
+        tx: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Tx' }] }
+        prev: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Pending' }] }
+    Statement:
+      type: object
+      properties:
+        month: { type: string }
+        today: { type: string, format: date }
+        cur: { type: string }
+        openingDate: { type: string, format: date }
+        items: { type: array, items: { $ref: '#/components/schemas/StatementItem' } }
+        dayBalances: { type: object, additionalProperties: { type: number }, description: '"AAAA-MM-DD" → saldo previsto no fim do dia' }
+        endBalance: { type: number }
+        knownCategories: { type: array, items: { type: string } }
+    DetailLine:
+      type: object
+      properties:
+        type: { $ref: '#/components/schemas/TxType' }
+        name: { type: string }
+        amount: { $ref: '#/components/schemas/Money' }
+        note: { type: string, example: 'previsto dia 15' }
+    ProjectionRow:
+      type: object
+      properties:
+        k: { type: string }
+        in: { type: number }
+        out: { type: number }
+        net: { type: number }
+        end: { type: number }
+        varOut: { type: number }
+        lines: { type: array, items: { $ref: '#/components/schemas/DetailLine' }, description: ordenadas por valor decrescente }
+    Recurring:
+      type: object
+      properties:
+        id: { type: string }
+        type: { $ref: '#/components/schemas/TxType' }
+        name: { type: string }
+        note: { type: string }
+        amount: { type: number }
+        gross: { type: [number, 'null'] }
+        isSalary: { type: boolean }
+        tithe: { type: boolean }
+        formula: { type: [string, 'null'], enum: [decimo, tithe, null] }
+        day: { type: integer, minimum: 1, maximum: 31 }
+        freq: { type: string, enum: [mensal, parcelas, unica] }
+        startMonth: { type: string }
+        endMonth: { type: [string, 'null'] }
+        parcels: { type: [integer, 'null'] }
+        category: { type: string }
+        matchKeywords: { type: array, items: { type: string } }
+        skipMonths: { type: array, items: { type: string } }
+        isSample: { type: boolean }
+        vigencia: { type: string, example: '5 de 6 parcelas restantes · até Mar/27' }
+        displayAmount: { type: number, description: valor mostrado na lista (fórmulas calculadas) }
+        ended: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+    Projection:
+      type: object
+      properties:
+        today: { type: string, format: date }
+        cur: { type: string }
+        balance: { type: number }
+        varAvg: { type: number }
+        includeVariable: { type: boolean }
+        rows: { type: array, items: { $ref: '#/components/schemas/ProjectionRow' }, minItems: 7, maxItems: 7 }
+        base:
+          type: object
+          properties: { k: { type: string }, salary: { type: number }, fixed: { type: number }, net: { type: number } }
+        recurring: { type: array, items: { $ref: '#/components/schemas/Recurring' } }
+        titheBase: { type: string, enum: [liquido, bruto] }
+    LinkOption:
+      type: object
+      properties:
+        value: { type: string, description: '"<recurringId>|<AAAA-MM>"' }
+        recurringId: { type: string }
+        k: { type: string }
+        label: { type: string, example: 'Luz · Nov/26' }
+        name: { type: string }
+        category: { type: string }
+        expected: { type: number }
+    Settings:
+      type: object
+      properties:
+        name: { type: string }
+        openingBalance: { type: number }
+        openingDate: { type: string, format: date }
+        titheBase: { type: string, enum: [liquido, bruto] }
+        netTotal: { type: number, description: soma dos salários líquidos ativos no mês atual }
+        grossTotal: { type: number }
+        hasSampleTx: { type: boolean }
+        canRestoreSample: { type: boolean }
+        captureMode: { type: string, enum: [inbox, parse] }
+        mpSwapCreditDebit: { type: boolean }
+    SettingsInput:
+      type: object
+      properties:
+        name: { type: string }
+        openingBalance: { type: number }
+        openingDate: { type: string, format: date }
+        titheBase: { type: string, enum: [liquido, bruto] }
+        captureMode: { type: string, enum: [inbox, parse] }
+        mpSwapCreditDebit: { type: boolean }
+    TxInput:
+      type: object
+      required: [type, amount, date]
+      properties:
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { type: number, exclusiveMinimum: 0 }
+        date: { type: string, format: date }
+        description: { type: string, maxLength: 60, description: vazio + vínculo = nome da conta }
+        category: { type: string, description: 'vazio = "Renda extra" (in) / "Outros" (out)' }
+        recurringId: { type: [string, 'null'] }
+        recurringMonth: { type: [string, 'null'] }
+        inboxId: { type: [string, 'null'], description: 'criado a partir de "Para revisar": o item vira imported' }
+    RecurringInput:
+      type: object
+      required: [type, name, day, freq, startMonth]
+      properties:
+        type: { $ref: '#/components/schemas/TxType' }
+        name: { type: string, minLength: 1, maxLength: 60 }
+        note: { type: string }
+        amount: { type: number, description: '> 0 quando sem fórmula' }
+        gross: { type: [number, 'null'] }
+        isSalary: { type: boolean }
+        tithe: { type: boolean }
+        formula: { type: [string, 'null'], enum: [decimo, tithe, null] }
+        day: { type: integer, minimum: 1, maximum: 31 }
+        freq: { type: string, enum: [mensal, parcelas, unica] }
+        startMonth: { type: string }
+        parcels: { type: [integer, 'null'] }
+        category: { type: string }
+        matchKeywords: { type: array, items: { type: string } }
+    MonthInput: { type: object, required: [month], properties: { month: { type: string } } }
+
+    PluggyAccount:
+      type: object
+      properties: { id: { type: string }, type: { type: string, enum: [BANK, CREDIT] }, subtype: { type: string }, name: { type: string }, number: { type: string } }
+    PluggyItem:
+      type: object
+      properties:
+        id: { type: string }
+        itemId: { type: string }
+        connectorName: { type: [string, 'null'] }
+        owner: { type: [string, 'null'], description: e-mail de quem cadastrou }
+        includeAccountIds: { type: array, items: { type: string } }
+        accounts: { type: array, items: { $ref: '#/components/schemas/PluggyAccount' } }
+        lastSyncAt: { type: [string, 'null'], format: date-time }
+        status: { type: string }
+        lastError: { type: [string, 'null'] }
+    SyncResult:
+      type: object
+      properties: { inserted: { type: integer }, errors: { type: array, items: { type: string } } }
+    MpAccount:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        status: { type: string, enum: [new, requested, error] }
+        lastImportAt: { type: [string, 'null'], format: date-time }
+        lastError: { type: [string, 'null'] }
+    CategoryRule:
+      type: object
+      properties:
+        id: { type: string }
+        matchType: { type: string, enum: [description_contains, pluggy_category] }
+        matchValue: { type: string }
+        category: { type: string }
+        priority: { type: integer, description: menor vence }
+    CategoryRuleInput:
+      type: object
+      required: [matchType, matchValue, category]
+      properties:
+        matchType: { type: string, enum: [description_contains, pluggy_category] }
+        matchValue: { type: string }
+        category: { type: string }
+        priority: { type: integer, default: 100 }
+
+    CaptureItem:
+      type: object
+      required: [hash, package, postTime]
+      properties:
+        hash: { type: string, description: 'sha256_hex(package|postTime_ms|title|text), calculado no código nativo' }
+        package: { type: string }
+        postTime: { type: integer, description: ms desde a época }
+        title: { type: string }
+        text: { type: string }
+    CaptureBatch:
+      type: object
+      required: [items]
+      properties:
+        deviceLabel: { type: string }
+        items: { type: array, items: { $ref: '#/components/schemas/CaptureItem' }, maxItems: 200 }
+    InboxItem:
+      type: object
+      properties:
+        id: { type: string }
+        package: { type: string, description: "'sistema' para avisos do servidor (8.6)" }
+        deviceLabel: { type: [string, 'null'] }
+        title: { type: [string, 'null'] }
+        body: { type: [string, 'null'] }
+        postedAt: { type: string, format: date-time }
+        status: { type: string, enum: [new, imported, ignored] }
+        action: { type: string, enum: [create, review-delete, info], description: 'create = "Criar lançamento"/"Ignorar"; review-delete = "Excluir lançamento"/"Manter"' }
+        transactionId: { type: [string, 'null'] }
+        parsed:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties: { type: { $ref: '#/components/schemas/TxType' }, amount: { type: [number, 'null'] }, description: { type: [string, 'null'] }, date: { type: string, format: date } }
+    Inbox:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/InboxItem' } }
+        newCount: { type: integer }
+    ParserRule:
+      type: object
+      properties: { id: { type: string }, pattern: { type: string }, type: { type: string, enum: [in, out, ignore] }, priority: { type: integer } }
+    ParserRuleInput:
+      type: object
+      required: [pattern, type]
+      properties: { pattern: { type: string }, type: { type: string, enum: [in, out, ignore] }, priority: { type: integer, default: 100 } }
+
+    CsvMapping:
+      type: object
+      properties:
+        date: { type: string, description: nome da coluna }
+        description: { type: string }
+        amount: { type: [string, 'null'], description: valor com sinal }
+        credit: { type: [string, 'null'] }
+        debit: { type: [string, 'null'] }
+        id: { type: [string, 'null'], description: id da operação (opcional) }
+    CsvRequest:
+      type: object
+      required: [headers, rows]
+      properties:
+        fileName: { type: string }
+        headers: { type: array, items: { type: string } }
+        rows: { type: array, items: { type: array, items: { type: string } } }
+        mapping: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/CsvMapping' }] }
+        owner: { type: [string, 'null'], description: 'dono da conta (relatório de Liberações, 8.9)' }
+    CsvLine:
+      type: object
+      properties:
+        n: { type: integer }
+        date: { type: string, format: date }
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { type: number }
+        description: { type: string }
+        category: { type: string }
+        status: { type: string, enum: [new, existing, duplicate] }
+        similarTo: { type: [string, 'null'], format: date, description: 'possível duplicata: "Parece com lançamento de dd/mm"' }
+        error: { type: [string, 'null'], description: linha que não pôde ser lida }
+    CsvPreview:
+      type: object
+      properties:
+        kind: { type: string, enum: [generic, release] }
+        needsMapping: { type: boolean }
+        needsOwner: { type: boolean }
+        owners: { type: array, items: { type: string } }
+        mapping: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/CsvMapping' }] }
+        counts: { type: object, properties: { new: { type: integer }, existing: { type: integer }, duplicate: { type: integer } } }
+        lines: { type: array, items: { $ref: '#/components/schemas/CsvLine' } }

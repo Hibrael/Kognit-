@@ -1,0 +1,11 @@
+{
+  "name": "Casa",
+  "openingBalance": 420,
+  "openingDate": "2026-10-01",
+  "titheBase": "liquido",
+  "netTotal": 3339.38,
+  "grossTotal": 3375.98,
+  "hasSampleTx": true,
+  "canRestoreSample": true,
+  "captureMode": "inbox"
+}
