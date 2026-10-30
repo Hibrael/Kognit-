@@ -1,0 +1,20 @@
+# Decisões
+
+Registro exigido pela especificação (`docs/especificacao.html`, seção 0.1): tudo o que não estava escrito,
+ou que precisou ser adaptado, com data, dúvida, escolha e motivo.
+
+| Data | Dúvida | Escolha | Motivo |
+|---|---|---|---|
+| 29/10/2026 | A especificação (D8, seção 9) junta front e back no Supabase (Edge Functions em Deno, RLS, Realtime). O projeto será feito em conjunto: o front fica neste repositório e o back vem de fora. | Front e back separados por um contrato HTTP: [`contracts/openapi.yaml`](../contracts/openapi.yaml). Este repositório guarda só o front, o contrato e a documentação. O back pode ser em qualquer linguagem. Detalhes em [`ARQUITETURA.md`](ARQUITETURA.md). | Pedido do dono do projeto: front independente da linguagem do back. |
+| 29/10/2026 | Front: "framework à escolha". | **React + Vite + TypeScript + Capacitor**, nas versões fixas da 9.3 (sem `@supabase/supabase-js`). | É a stack de front da própria especificação: um build estático serve para o APK e para a web. |
+| 29/10/2026 | Onde ficam as regras da seção 6 (o "domínio compartilhado" da 10.1). | No back. A API devolve as telas já calculadas (visão geral, extrato do mês com saldo por dia, projeção); o front só filtra e soma os itens entregues (tipo, categoria, texto, calendário), o que a RF-06 diz não afetar saldos. | Uma fonte da verdade, sem repetir o cálculo em duas linguagens. |
+| 29/10/2026 | Realtime do Supabase. | **Server-Sent Events** em `GET /api/events` (eventos `changed` e `notice`). | Padrão HTTP que qualquer linguagem serve e que o navegador lê com `EventSource`, sem biblioteca. |
+| 29/10/2026 | Login Google no APK (10.3) dependia do `signInWithOAuth` do Supabase. | O back faz o OAuth do Google e devolve um código de uso único para `https://<app>/?code=` ou `minhascontas://auth?code=`; o front troca por um token. O mesmo fluxo serve web e APK. | Mantém o front sem segredo nenhum e sem SDK de login. |
+| 29/10/2026 | Escritas otimistas (10.2). | A tela recarrega logo após gravar. Em erro: aviso "Não foi salvo · Tentar de novo" (16.1). | Com o cálculo no back, aplicar antes na tela exigiria repetir as regras no front. |
+| 29/10/2026 | Desfazer (16.2). | Toda escrita devolve um `UndoToken` opaco; o front guarda até 20 e devolve em `POST /api/undo`. O back recusa com "Alterado por outra pessoa" se a linha mudou depois. | A regra da 16.2, sem o front precisar conhecer as tabelas. |
+| 29/10/2026 | Skill `/impeccable` (0.2) é um plugin do Claude Code que precisa ser instalado e recarregado. | Não executada na construção inicial; as telas reproduzem o protótipo e os tokens da 4.1 literalmente (que vencem em conflito, pela própria 0.2). Rodar `/impeccable critique` e `audit` em cada tela fica pendente. | Não dá para instalar e recarregar a skill dentro da sessão de construção. |
+| 29/10/2026 | Casa nova (16.6) não teria como criar a "Devolução 10%" nem o 13º: o protótipo só edita as fórmulas que vêm no exemplo. | O diálogo de conta fixa tem "Cálculo do valor": valor fixo, 13º (só entrada) ou devolução (só saída), com as validações da 16.3. | Sem isso a regra D7 não seria usável fora do exemplo. |
+| 29/10/2026 | "Apagar exemplos": a 6.9 fala só dos lançamentos; a 16.6 diz "linhas com is_sample". | Segue a 6.9 e o protótipo: apaga só os lançamentos de exemplo. | É o que o cenário 3 da 7.3 testa e o que o protótipo faz. |
+| 29/10/2026 | Vigência de conta mensal com `end_month` (16.3, "Mudar a partir de…") não tem texto na 6.8. | "todo mês · até Mar/27". | Mais simples, no padrão das parcelas. |
+| 29/10/2026 | `parseMoney` (6.9) nos campos de valor. | Uma cópia em `app/src/lib/format.ts` só para avisar na hora, com os casos da 6.9 em teste; o back valida de novo. | Aviso imediato sem ida ao servidor. |
+| 29/10/2026 | Busca do extrato (RF-07) "sem diferenciar maiúsculas e acentos"; o protótipo só ignora maiúsculas. | O front normaliza (NFD, sem acentos) antes de comparar. | Segue o texto da RF-07. |

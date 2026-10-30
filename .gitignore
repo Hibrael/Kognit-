@@ -1,0 +1,24 @@
+# Node
+node_modules/
+dist/
+*.local
+.vite/
+
+# Android (gerado pelo Capacitor)
+app/android/app/build/
+app/android/.gradle/
+app/android/local.properties
+*.keystore
+*.jks
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Editor / SO
+.idea/
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db
+.DS_Store
