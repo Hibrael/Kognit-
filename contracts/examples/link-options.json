@@ -1,0 +1,119 @@
+[
+  {
+    "value": "433ff014-8c65-41de-bdf2-47422429aed1|2026-11",
+    "recurringId": "433ff014-8c65-41de-bdf2-47422429aed1",
+    "k": "2026-11",
+    "label": "Luz · Nov/26",
+    "name": "Luz",
+    "category": "Contas da casa",
+    "expected": 150
+  },
+  {
+    "value": "5377bdba-bbf0-4fd3-bf07-b32bf7341ccb|2026-11",
+    "recurringId": "5377bdba-bbf0-4fd3-bf07-b32bf7341ccb",
+    "k": "2026-11",
+    "label": "Carro · Nov/26",
+    "name": "Carro",
+    "category": "Transporte",
+    "expected": 1092
+  },
+  {
+    "value": "7c87b5e3-8f24-4be2-8013-ec8745e517b0|2026-11",
+    "recurringId": "7c87b5e3-8f24-4be2-8013-ec8745e517b0",
+    "k": "2026-11",
+    "label": "Devolução 10% · Nov/26",
+    "name": "Devolução 10%",
+    "category": "Devolução",
+    "expected": 502.74
+  },
+  {
+    "value": "953624c8-b130-421f-9efb-6047b4701d9b|2026-11",
+    "recurringId": "953624c8-b130-421f-9efb-6047b4701d9b",
+    "k": "2026-11",
+    "label": "Santander · Nov/26",
+    "name": "Santander",
+    "category": "Parcelas",
+    "expected": 105
+  },
+  {
+    "value": "d0439d00-a073-4c6c-baa4-4656a1b3bef7|2026-11",
+    "recurringId": "d0439d00-a073-4c6c-baa4-4656a1b3bef7",
+    "k": "2026-11",
+    "label": "Caixa · Nov/26",
+    "name": "Caixa",
+    "category": "Parcelas",
+    "expected": 251.12
+  },
+  {
+    "value": "d51022a4-f87b-4d13-be52-a25a4bf7688d|2026-11",
+    "recurringId": "d51022a4-f87b-4d13-be52-a25a4bf7688d",
+    "k": "2026-11",
+    "label": "Água · Nov/26",
+    "name": "Água",
+    "category": "Contas da casa",
+    "expected": 100
+  },
+  {
+    "value": "dc000304-5462-401c-82a2-d6608d66240b|2026-11",
+    "recurringId": "dc000304-5462-401c-82a2-d6608d66240b",
+    "k": "2026-11",
+    "label": "Mercado Pago · Nov/26",
+    "name": "Mercado Pago",
+    "category": "Mercado",
+    "expected": 950
+  },
+  {
+    "value": "433ff014-8c65-41de-bdf2-47422429aed1|2026-12",
+    "recurringId": "433ff014-8c65-41de-bdf2-47422429aed1",
+    "k": "2026-12",
+    "label": "Luz · Dez/26",
+    "name": "Luz",
+    "category": "Contas da casa",
+    "expected": 150
+  },
+  {
+    "value": "5377bdba-bbf0-4fd3-bf07-b32bf7341ccb|2026-12",
+    "recurringId": "5377bdba-bbf0-4fd3-bf07-b32bf7341ccb",
+    "k": "2026-12",
+    "label": "Carro · Dez/26",
+    "name": "Carro",
+    "category": "Transporte",
+    "expected": 1092
+  },
+  {
+    "value": "7c87b5e3-8f24-4be2-8013-ec8745e517b0|2026-12",
+    "recurringId": "7c87b5e3-8f24-4be2-8013-ec8745e517b0",
+    "k": "2026-12",
+    "label": "Devolução 10% · Dez/26",
+    "name": "Devolução 10%",
+    "category": "Devolução",
+    "expected": 333.94
+  },
+  {
+    "value": "d0439d00-a073-4c6c-baa4-4656a1b3bef7|2026-12",
+    "recurringId": "d0439d00-a073-4c6c-baa4-4656a1b3bef7",
+    "k": "2026-12",
+    "label": "Caixa · Dez/26",
+    "name": "Caixa",
+    "category": "Parcelas",
+    "expected": 251.12
+  },
+  {
+    "value": "d51022a4-f87b-4d13-be52-a25a4bf7688d|2026-12",
+    "recurringId": "d51022a4-f87b-4d13-be52-a25a4bf7688d",
+    "k": "2026-12",
+    "label": "Água · Dez/26",
+    "name": "Água",
+    "category": "Contas da casa",
+    "expected": 100
+  },
+  {
+    "value": "dc000304-5462-401c-82a2-d6608d66240b|2026-12",
+    "recurringId": "dc000304-5462-401c-82a2-d6608d66240b",
+    "k": "2026-12",
+    "label": "Mercado Pago · Dez/26",
+    "name": "Mercado Pago",
+    "category": "Mercado",
+    "expected": 950
+  }
+]

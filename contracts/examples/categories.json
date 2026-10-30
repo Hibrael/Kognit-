@@ -1,0 +1,15 @@
+{
+  "in": [
+    "Renda extra",
+    "Salário"
+  ],
+  "out": [
+    "Alimentação",
+    "Contas da casa",
+    "Devolução",
+    "Mercado",
+    "Parcelas",
+    "Saúde",
+    "Transporte"
+  ]
+}
