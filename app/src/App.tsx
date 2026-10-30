@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, ApiError } from './lib/api'
+import { api, ApiError, DEMO } from './lib/api'
 import { todaySP, monthOf } from './lib/format'
 import { AppCtx, usePref, type AppState, type Tab, type TxPreset } from './lib/store'
 import type { Recurring, TxType, UndoToken } from './lib/types'
@@ -168,7 +168,8 @@ export default function App({ me, onSignOut }: { me: Me; onSignOut: () => void }
           </div>
         </div>
       </header>
-      {!online && <div className="offline" role="status">Sem conexão — somente leitura</div>}
+      {DEMO && <div className="offline" role="status">Modo demonstração: back simulado, dados só neste navegador</div>}
+      {!online && !DEMO && <div className="offline" role="status">Sem conexão — somente leitura</div>}
 
       <main className="wrap">
         {tab === 'geral' && <Overview />}

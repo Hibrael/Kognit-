@@ -20,7 +20,22 @@ backend/      base do backend em C# (ASP.NET Core + PostgreSQL) pronta para rece
 docs/         especificação, arquitetura e decisões
 ```
 
-## Rodar o front
+## Ver o front sem back (modo demonstração)
+
+Pré-requisito: Node.js ≥ 22.
+
+```bash
+cd app
+npm ci
+npm run demo
+```
+
+Abra `http://localhost:5173`. O back é simulado dentro do navegador (`app/src/mock`), começa com o exemplo da
+seção 7.1 e guarda as mudanças só naquele navegador. Telas, lançamentos, contas fixas, desfazer e configurações
+funcionam; integrações (Pluggy, Mercado Pago, captura, CSV) respondem "indisponível". Para recomeçar do
+exemplo: Configurações › Casa › "Apagar minha conta e dados". O modo demonstração não entra no `npm run build`.
+
+## Rodar o front com um back
 
 Pré-requisito: Node.js ≥ 22 e um backend que cumpra o contrato rodando localmente.
 

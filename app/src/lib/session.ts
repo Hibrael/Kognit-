@@ -1,10 +1,11 @@
-import { api, apiUrl, configureAuth } from './api'
+import { api, apiUrl, configureAuth, DEMO } from './api'
 
 // Sessão (10.3): o token é opaco para o front; vai em Authorization: Bearer.
 
 const KEY = 'minhascontas:token'
 let token: string | null = null
 try { token = localStorage.getItem(KEY) } catch { /* sem armazenamento */ }
+if (DEMO && !token) token = 'demo'   // modo demonstração entra direto
 
 const listeners = new Set<() => void>()
 export const onSessionChange = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f) } }
@@ -13,9 +14,11 @@ const emit = () => listeners.forEach(f => f())
 export const getToken = () => token
 
 export function setToken(t: string | null) {
+  const changed = t !== token
   token = t
   try { if (t) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY) } catch { /* sem armazenamento */ }
-  emit()
+  // renovar com o mesmo token não é troca de sessão: não recarrega o usuário
+  if (changed) emit()
 }
 
 // 401 em qualquer rota → volta para o login sem perder a aba (a aba fica nas preferências do aparelho)
@@ -59,6 +62,7 @@ export const googleStartUrl = () => apiUrl(`/api/auth/google/start?client=${isNa
 
 /** Tempo real (Server-Sent Events, contrato /api/events). Reconecta sozinho. */
 export function subscribeEvents(on: { changed: () => void; notice: (d: { message: string; undo?: Record<string, unknown> }) => void }) {
+  if (DEMO) return () => {}   // sem servidor, sem eventos
   let es: EventSource | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
   let stopped = false

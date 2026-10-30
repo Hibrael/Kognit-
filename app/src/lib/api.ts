@@ -1,5 +1,8 @@
 import { isDate } from './format'
 
+/** Modo demonstração (npm run demo): o back é simulado no navegador (src/mock); nada sai para a rede. */
+export const DEMO = import.meta.env.VITE_DEMO === 'true'
+
 /** Endereço da API: VITE_API_URL no build (APK/web); vazio = mesma origem (proxy do Vite em desenvolvimento). */
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
@@ -38,7 +41,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   }
   let res: Response
   try {
-    res = await fetch(BASE + withToday(path), { ...init, headers, body })
+    const doFetch: (url: string, init: RequestInit) => Promise<Response> = DEMO ? (await import('../mock/server')).mockFetch : fetch
+    res = await doFetch(BASE + withToday(path), { ...init, headers, body })
   } catch {
     throw new ApiError(0, 'Sem conexão')
   }
