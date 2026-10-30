@@ -6,6 +6,7 @@ import type { MutationResult, Settings } from '../lib/types'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
 import { Switch } from './common'
+import { CsvImportDialog } from './CsvImportDialog'
 
 /** Painel lateral de configurações (RF-14, 16.5). Seções extras (casa, integrações) entram por `children`. */
 export function SettingsSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children?: ReactNode }) {
@@ -23,6 +24,7 @@ function SettingsBody() {
   const [opening, setOpening] = useState('')
   const [date, setDate] = useState('')
   const file = useRef<HTMLInputElement>(null)
+  const [csvOpen, setCsvOpen] = useState(false)
   useEffect(() => { if (s) { setOpening(plain(s.openingBalance)); setDate(s.openingDate) } }, [s, version])
   if (!s) return <div className="state-loading"><span className="spinner" /></div>
 
@@ -97,6 +99,7 @@ function SettingsBody() {
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <button className="btn" type="button" onClick={exportJson}><Icon name="download" />Exportar JSON</button>
           <button className="btn" type="button" onClick={() => file.current?.click()}><Icon name="upload" />Importar JSON</button>
+          <button className="btn" type="button" onClick={() => setCsvOpen(true)}><Icon name="upload" />Importar extrato CSV/XLSX</button>
           <input ref={file} type="file" accept="application/json,.json" hidden
             onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importJson(f) }} />
         </div>
@@ -109,6 +112,7 @@ function SettingsBody() {
           )}
         </div>
       </section>
+      <CsvImportDialog open={csvOpen} onClose={() => setCsvOpen(false)} />
     </>
   )
 }

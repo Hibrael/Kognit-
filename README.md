@@ -61,3 +61,9 @@ npx cap open android
 
 No Android Studio: Build › Generate Signed App Bundle or APK › APK. O keystore (`.jks`) e a senha nunca vão
 para o Git. O plugin nativo de captura (10.6) está em `app/android/app/src/main/java/br/com/minhascontas/app/capture`.
+
+## Versão web (10.8)
+
+O mesmo build estático serve a web. Na Vercel: Root Directory `app`, framework Vite, saída `dist`, variável
+`VITE_API_URL` com o endereço do back (criada antes do primeiro deploy). `app/vercel.json` manda todas as rotas
+para o `index.html`. O back precisa liberar a origem da versão web no CORS.

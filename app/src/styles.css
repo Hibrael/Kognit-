@@ -331,3 +331,11 @@ dialog.sheet[open]{display:flex;flex-direction:column;animation:slide .2s ease-o
 /* captura (F5) */
 .inbox-body{font-size:12.5px;color:var(--fg-2);white-space:pre-wrap;overflow-wrap:anywhere}
 .mono{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-size:12.5px}
+/* importação de extrato (F6) */
+.csv-list{max-height:46dvh;overflow:auto;border:1px solid var(--border);border-radius:10px}
+.csv-line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--grid)}
+.csv-line:first-child{border-top:0}
+.csv-line.done{color:var(--muted)}
+.csv-d{display:flex;flex-direction:column;min-width:0}
+.csv-d>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.csv-d small{font-size:11.5px;color:var(--muted)}
