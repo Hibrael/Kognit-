@@ -10,6 +10,10 @@ import { Icon } from './ui/Icon'
 import { RecDialog } from './ui/RecDialog'
 import { SettingsSheet } from './ui/SettingsSheet'
 import { TxDialog } from './ui/TxDialog'
+import { HouseSection } from './ui/HouseSection'
+import { subscribeEvents } from './lib/session'
+
+export interface Me { email: string; name: string | null; household: { id: string; name: string; role: 'owner' | 'member' } }
 
 const TODAY = todaySP()
 const CUR = monthOf(TODAY)
@@ -21,7 +25,7 @@ function effectiveTheme() {
 
 interface ToastState { msg: string; undo: UndoToken | null; retry?: () => void; id: number }
 
-export default function App() {
+export default function App({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   const [version, setVersion] = useState(0)
   const [tab, setTab] = usePref<Tab>('tab', 'geral')
   const [extMonth, setExtMonth] = useState(CUR)
@@ -60,6 +64,8 @@ export default function App() {
   }, [refresh, toast])
 
   const mutate = useCallback<AppState['mutate']>(async (run, opts) => {
+    // sem conexão: somente leitura (16.1)
+    if (!navigator.onLine) { toast('Sem conexão — somente leitura'); return null }
     try {
       const res = await run()
       undoStack.current.push(res.undo)
@@ -76,6 +82,16 @@ export default function App() {
   }, [refresh, toast])
 
   const go = useCallback((t: Tab) => { setTab(t); window.scrollTo({ top: 0 }) }, [setTab])
+
+  // tempo real: outra pessoa (ou a sincronização) gravou → recarrega; avisos com "Desfazer" (8.7)
+  useEffect(() => subscribeEvents({
+    changed: refresh,
+    notice: d => {
+      if (d.undo) { undoStack.current.push(d.undo); if (undoStack.current.length > 20) undoStack.current.shift() }
+      toast(d.message, d.undo ?? null)
+      refresh()
+    },
+  }), [refresh, toast])
 
   useEffect(() => {
     api<Record<TxType, string[]>>('/api/categories').then(setCategories).catch(() => {})
@@ -154,7 +170,9 @@ export default function App() {
 
       <TxDialog preset={txPreset} today={TODAY} categories={categories} onClose={() => setTxPreset(null)} />
       <RecDialog open={rec.open} rec={rec.rec} cur={CUR} onClose={() => setRec({ open: false, rec: null })} />
-      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)}>
+        {settingsOpen && <HouseSection role={me.household.role} onSignOut={onSignOut} />}
+      </SettingsSheet>
 
       <div className={'toast' + (toastState ? ' on' : '')} role="status" aria-live="polite">
         <span>{toastState?.msg}</span>

@@ -48,6 +48,7 @@ function SettingsBody() {
       a.download = `minhas-contas-${new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())}.json`
       document.body.append(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+      try { localStorage.setItem('minhascontas:lastBackup', String(Date.now())) } catch { /* sem armazenamento */ }
       toast('Arquivo JSON exportado')
     } catch { toast('Não foi possível exportar') }
   }

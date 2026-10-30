@@ -6,10 +6,18 @@ import type { Bill, MutationResult, Overview as OverviewData } from '../lib/type
 import { Icon } from '../ui/Icon'
 import { TxRow, ViewGate } from '../ui/common'
 
+/** Lembrete mensal de backup (16.4): sem exportação nos últimos 30 dias. */
+function needsBackup() {
+  try {
+    const last = Number(localStorage.getItem('minhascontas:lastBackup') || 0)
+    return Date.now() - last > 30 * 864e5
+  } catch { return false }
+}
+
 /** Visão geral (4.3, 6.6): quatro números, "A pagar e a receber" e "Últimos lançamentos". */
 export function Overview() {
   const v = useView<OverviewData>('/api/overview')
-  const { go, openTx, mutate, setProjOpen } = useApp()
+  const { go, openTx, mutate, setProjOpen, openSettings } = useApp()
   const [showDone, setShowDone] = useState(false)
   const d = v.data
 
@@ -28,6 +36,12 @@ export function Overview() {
               <div className="card empty state">
                 Comece cadastrando seu salário e suas contas fixas ·{' '}
                 <button type="button" className="link-btn" onClick={() => go('projecao')}>Ir para Fixos</button>
+              </div>
+            )}
+            {needsBackup() && (
+              <div className="card reminder">
+                <span>Faça um backup (Exportar JSON): o servidor não guarda cópias automáticas.</span>
+                <button type="button" className="btn sm" onClick={openSettings}>Exportar</button>
               </div>
             )}
             <div className="kpis">

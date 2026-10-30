@@ -307,3 +307,18 @@ dialog.sheet[open]{display:flex;flex-direction:column;animation:slide .2s ease-o
 .empty.state{margin-bottom:16px}
 .offline{position:sticky;top:61px;z-index:15;padding:8px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12.5px;color:var(--fg-2);text-align:center}
 .toast button+button{margin-left:-4px}
+
+/* login e "Bem-vindo" (10.3) */
+.auth{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.auth-card{width:min(380px,100%);padding:24px 22px;display:grid;gap:14px}
+.auth-card .brand{margin:0}
+.stack-sm{display:grid;gap:10px}
+.btn.full{width:100%}
+.auth-note{margin:0;font-size:13px;color:var(--fg-2)}
+.auth-error{margin:0;font-size:12.5px;color:var(--fg);padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px}
+.auth-out{justify-self:start;font-size:12.5px}
+.code-input{font-size:18px;letter-spacing:.2em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+/* convite (Configurações › Casa) */
+.invite{display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:10px}
+.invite-code{font-size:26px;font-weight:600;letter-spacing:.18em}
+.reminder{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;font-size:12.5px;color:var(--fg-2)}
