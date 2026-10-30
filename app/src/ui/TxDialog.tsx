@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../lib/api'
-import { CATS_IN, CATS_OUT, isDate, mLabelY, parseMoney, plain } from '../lib/format'
+import { CATS_IN, CATS_OUT, isDate, mLabelY, norm, parseMoney, plain } from '../lib/format'
 import { useApp, type TxPreset } from '../lib/store'
 import type { LinkOption, MutationResult, TxType } from '../lib/types'
 import { Dialog } from './Dialog'
@@ -9,8 +9,10 @@ import { Icon } from './Icon'
 const NEW_CAT = '__nova__'
 
 /** Diálogo de lançamento (4.6, RF-01, RF-02, RF-09). */
-export function TxDialog({ preset, today, categories, onClose, onSaved }: {
+export function TxDialog({ preset, today, categories, onClose, onSaved, onCategoryChanged }: {
   preset: TxPreset | null; today: string; categories: Record<TxType, string[]>; onClose: () => void; onSaved?: (id: string) => void
+  /** categoria de um lançamento importado foi trocada: oferecer "Aplicar a lançamentos parecidos" (8.5) */
+  onCategoryChanged?: (description: string, category: string) => void
 }) {
   const { mutate, toast } = useApp()
   const [type, setType] = useState<TxType>('out')
@@ -85,7 +87,8 @@ export function TxDialog({ preset, today, categories, onClose, onSaved }: {
     if (!isDate(date)) { setBad('date'); return }
     const category = cat === NEW_CAT ? newCat.trim() || (type === 'in' ? 'Renda extra' : 'Outros') : cat
     const [recurringId, recurringMonth] = link ? link.split('|') : [null, null]
-    const body = { type, amount: v, date, description: desc.trim(), category, recurringId, recurringMonth }
+    const inboxId = preset.kind === 'new' ? preset.inboxId ?? null : null
+    const body = { type, amount: v, date, description: desc.trim(), category, recurringId, recurringMonth, inboxId }
     setSaving(true)
     try {
       const res = await api<MutationResult>(editing ? `/api/transactions/${editing.id}` : '/api/transactions',
@@ -93,6 +96,8 @@ export function TxDialog({ preset, today, categories, onClose, onSaved }: {
       await mutate(async () => res)
       onSaved?.(res.id ?? '')
       onClose()
+      if (editing && editing.source !== 'manual' && editing.category !== category && desc.trim())
+        onCategoryChanged?.(norm(desc.trim()), category)
     } catch (err) {
       if (err instanceof ApiError && err.field === 'link') { setLink(''); toast(err.message) }
       else if (err instanceof ApiError && err.field === 'amount') { setBad('amount'); toast(err.message) }

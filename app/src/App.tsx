@@ -11,6 +11,8 @@ import { RecDialog } from './ui/RecDialog'
 import { SettingsSheet } from './ui/SettingsSheet'
 import { TxDialog } from './ui/TxDialog'
 import { HouseSection } from './ui/HouseSection'
+import { CategoryRulesSection, MercadoPagoSection, PluggySection } from './ui/IntegrationSections'
+import { SimilarDialog } from './ui/SimilarDialog'
 import { subscribeEvents } from './lib/session'
 
 export interface Me { email: string; name: string | null; household: { id: string; name: string; role: 'owner' | 'member' } }
@@ -34,6 +36,7 @@ export default function App({ me, onSignOut }: { me: Me; onSignOut: () => void }
   const [txPreset, setTxPreset] = useState<TxPreset | null>(null)
   const [rec, setRec] = useState<{ open: boolean; rec: Recurring | null }>({ open: false, rec: null })
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [similar, setSimilar] = useState<{ matchValue: string; category: string } | null>(null)
   const [toastState, setToastState] = useState<ToastState | null>(null)
   const [theme, setTheme] = useState(effectiveTheme)
   const [online, setOnline] = useState(navigator.onLine)
@@ -168,10 +171,17 @@ export default function App({ me, onSignOut }: { me: Me; onSignOut: () => void }
         {tab === 'projecao' && <Projection />}
       </main>
 
-      <TxDialog preset={txPreset} today={TODAY} categories={categories} onClose={() => setTxPreset(null)} />
+      <TxDialog preset={txPreset} today={TODAY} categories={categories} onClose={() => setTxPreset(null)}
+        onCategoryChanged={(matchValue, category) => setSimilar({ matchValue, category })} />
+      <SimilarDialog value={similar} onClose={() => setSimilar(null)} />
       <RecDialog open={rec.open} rec={rec.rec} cur={CUR} onClose={() => setRec({ open: false, rec: null })} />
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)}>
-        {settingsOpen && <HouseSection role={me.household.role} onSignOut={onSignOut} />}
+        {settingsOpen && <>
+          <HouseSection role={me.household.role} onSignOut={onSignOut} />
+          <PluggySection />
+          <MercadoPagoSection />
+          <CategoryRulesSection />
+        </>}
       </SettingsSheet>
 
       <div className={'toast' + (toastState ? ' on' : '')} role="status" aria-live="polite">

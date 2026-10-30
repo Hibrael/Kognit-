@@ -53,9 +53,38 @@ export interface LinkOption { value: string; recurringId: string; k: string; lab
 
 export interface Settings {
   name: string; openingBalance: number; openingDate: string; titheBase: 'liquido' | 'bruto'; netTotal: number; grossTotal: number
-  hasSampleTx: boolean; canRestoreSample: boolean; captureMode: 'inbox' | 'parse'
+  hasSampleTx: boolean; canRestoreSample: boolean; captureMode: 'inbox' | 'parse'; mpSwapCreditDebit?: boolean
 }
 
 /** Opaco: o back define o conteúdo; o front só guarda e devolve em POST /api/undo. */
 export type UndoToken = Record<string, unknown>
 export interface MutationResult { message: string; undo: UndoToken; id?: string }
+
+// ---------- F4: integrações ----------
+export interface PluggyAccount { id: string; type: 'BANK' | 'CREDIT'; subtype: string; name: string; number: string }
+export interface PluggyItem {
+  id: string; itemId: string; connectorName: string | null; owner: string | null; includeAccountIds: string[]
+  accounts: PluggyAccount[]; lastSyncAt: string | null; status: string; lastError: string | null
+}
+export interface SyncResult { inserted: number; errors?: string[] }
+export interface MpAccount { id: string; label: string; status: 'new' | 'requested' | 'error'; lastImportAt: string | null; lastError: string | null }
+export interface CategoryRule { id: string; matchType: 'description_contains' | 'pluggy_category'; matchValue: string; category: string; priority: number }
+
+// ---------- F5: captura ----------
+export interface InboxItem {
+  id: string; package: string; deviceLabel: string | null; title: string | null; body: string | null; postedAt: string
+  status: 'new' | 'imported' | 'ignored'; action: 'create' | 'review-delete' | 'info'; transactionId: string | null
+  parsed: { type: TxType; amount: number | null; description: string | null; date: string } | null
+}
+export interface ParserRule { id: string; pattern: string; type: 'in' | 'out' | 'ignore'; priority: number }
+
+// ---------- F6: CSV ----------
+export interface CsvMapping { date: string; description: string; amount: string | null; credit: string | null; debit: string | null; id: string | null }
+export interface CsvLine {
+  n: number; date: string; type: TxType; amount: number; description: string; category: string
+  status: 'new' | 'existing' | 'duplicate'; similarTo: string | null; error: string | null
+}
+export interface CsvPreview {
+  kind: 'generic' | 'release'; needsMapping: boolean; needsOwner: boolean; owners: string[]; mapping: CsvMapping | null
+  counts: { new: number; existing: number; duplicate: number }; lines: CsvLine[]
+}

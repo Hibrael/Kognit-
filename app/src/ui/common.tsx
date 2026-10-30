@@ -30,6 +30,7 @@ export function TxRow({ t, showDate, today }: { t: Tx; showDate?: boolean; today
     t.beforeOpening ? ' · antes do saldo inicial' : '',
   ].join('')
   const del = () => mutate(() => api<MutationResult>(`/api/transactions/${t.id}`, { method: 'DELETE' }))
+  const notTransfer = () => mutate(() => api<MutationResult>(`/api/transactions/${t.id}/not-transfer`, { method: 'POST' }))
   return (
     <div className={'li hov' + (t.isTransfer ? ' done' : '')}>
       <div className="d">
@@ -40,6 +41,7 @@ export function TxRow({ t, showDate, today }: { t: Tx; showDate?: boolean; today
         {t.isTransfer && <span className="pill">transferência</span>}
         <span className={'amt ' + (t.isTransfer ? 'muted' : isIn ? 'in' : '')}>{(isIn ? '+' : '−') + plain(t.amount)}</span>
         <div className="acts">
+          {t.isTransfer && <button type="button" className="btn sm ghost" onClick={notTransfer}>Não é transferência</button>}
           <button type="button" className="icon-btn sm" title="Editar" aria-label={`Editar ${t.description}`} onClick={() => openTx({ kind: 'edit', tx: t })}><Icon name="pencil" /></button>
           <button type="button" className="icon-btn sm" title="Excluir" aria-label={`Excluir ${t.description}`} onClick={del}><Icon name="trash" /></button>
         </div>
