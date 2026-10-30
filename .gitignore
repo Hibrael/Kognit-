@@ -22,3 +22,10 @@ app/android/local.properties
 !.vscode/extensions.json
 Thumbs.db
 .DS_Store
+
+# .NET (backend/)
+bin/
+obj/
+*.user
+.vs/
+TestResults/

@@ -1,0 +1,15 @@
+# Banco local para desenvolvimento: docker compose up -d
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: minhascontas
+      POSTGRES_USER: minhascontas
+      POSTGRES_PASSWORD: minhascontas
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

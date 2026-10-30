@@ -3,8 +3,8 @@
 Gestor de contas pessoais de um casal: saldo atual, extrato por dia com calendário, contas fixas
 (salário, mensais, parcelas) e projeção dos próximos 6 meses.
 
-Este repositório contém **o front e a arquitetura**. O backend é um serviço separado, em qualquer
-linguagem, que implementa o contrato em [`contracts/openapi.yaml`](contracts/openapi.yaml).
+Este repositório contém **o front, a arquitetura e a base do backend em C#**. O front fala com o back só
+pelo contrato em [`contracts/openapi.yaml`](contracts/openapi.yaml), então não depende da linguagem do back.
 
 - Especificação completa com o protótipo navegável: [`docs/especificacao.html`](docs/especificacao.html)
   (abra no navegador, aba **Documentação**).
@@ -16,6 +16,7 @@ linguagem, que implementa o contrato em [`contracts/openapi.yaml`](contracts/ope
 ```
 app/          React + Vite + TypeScript (+ Capacitor para o APK). Fala com o back só por HTTP/JSON e SSE.
 contracts/    openapi.yaml (o contrato), examples/ (respostas de referência) e check.mjs (aceitação do back)
+backend/      base do backend em C# (ASP.NET Core + PostgreSQL) pronta para receber a implementação
 docs/         especificação, arquitetura e decisões
 ```
 
