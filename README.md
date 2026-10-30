@@ -22,7 +22,8 @@ docs/         especificação, arquitetura e decisões
 
 ## Ver o front sem back (modo demonstração)
 
-Pré-requisito: Node.js ≥ 22.
+Pré-requisito: Node.js ≥ 22. No PowerShell, se aparecer "a execução de scripts foi desabilitada neste sistema",
+use `npm.cmd` no lugar de `npm` (ex.: `npm.cmd ci`, `npm.cmd run demo`) ou rode no Prompt de Comando (`cmd`).
 
 ```bash
 cd app
@@ -73,6 +74,9 @@ npm run build
 npx cap sync android
 npx cap open android
 ```
+
+Ícone (10.7), só quando for gerar o APK: `npx @capacitor/assets@3.0.5 generate --android` a partir de
+`app/assets/icon-only.png`.
 
 No Android Studio: Build › Generate Signed App Bundle or APK › APK. O keystore (`.jks`) e a senha nunca vão
 para o Git. O plugin nativo de captura (10.6) está em `app/android/app/src/main/java/br/com/minhascontas/app/capture`.
