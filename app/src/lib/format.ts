@@ -3,8 +3,9 @@
 export const MES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 export const MES_LONGO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 export const SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-export const CATS_IN = ['Salário', 'Renda extra', 'Reembolso', 'Outros']
-export const CATS_OUT = ['Moradia', 'Contas da casa', 'Mercado', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Parcelas', 'Devolução', 'Outros']
+// Categorias da API KOGNIT (Kognit.Dominio/Modelos/Modelos.cs, classe Categorias)
+export const CATS_IN = ['Vendas', 'Serviços', 'Outros']
+export const CATS_OUT = ['Fornecedor', 'Aluguel', 'Energia/água/internet', 'Impostos', 'Salários', 'Manutenção', 'Fatura do cartão', 'Outros']
 
 export const round2 = (v: number) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
 export const sum = <T,>(arr: T[], f: (x: T) => number) => round2(arr.reduce((s, x) => s + f(x), 0))

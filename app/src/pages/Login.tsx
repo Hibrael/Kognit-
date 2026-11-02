@@ -1,65 +1,78 @@
 import { useEffect, useState } from 'react'
-import { api, ApiError } from '../lib/api'
-import { googleStartUrl, isNative, setToken, type AuthOptions } from '../lib/session'
+import { ApiError } from '../lib/api'
+import { entrar, registrar } from '../lib/session'
+import { SLOW_MS } from '../lib/store'
 
-/** Login (RF-16, 10.3): Google ou link mágico; só os e-mails do casal entram. */
-export function Login({ message, openExternal }: { message: string | null; openExternal: (url: string) => void }) {
-  const [opts, setOpts] = useState<AuthOptions | null>(null)
+/** Login da API KOGNIT: e-mail e senha, ou criar a conta do negócio. */
+export function Login() {
+  const [mode, setMode] = useState<'entrar' | 'criar'>('entrar')
+  const [nome, setNome] = useState('')
+  const [nomeNegocio, setNomeNegocio] = useState('')
   const [email, setEmail] = useState('')
-  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle')
-  const [error, setError] = useState<string | null>(message)
+  const [senha, setSenha] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [slow, setSlow] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
+  // o servidor grátis dorme sem uso: se o login demorar, explica em vez de parecer travado
   useEffect(() => {
-    api<AuthOptions>('/api/auth/options').then(setOpts).catch(() => setError('Sem conexão'))
-  }, [])
+    if (!busy) { setSlow(false); return }
+    const t = setTimeout(() => setSlow(true), SLOW_MS)
+    return () => clearTimeout(t)
+  }, [busy])
 
-  const sendLink = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.includes('@')) { setError('Informe seu e-mail'); return }
-    setState('sending'); setError(null)
+    if (mode === 'criar' && nome.trim().length < 2) { setError('Informe seu nome'); return }
+    if (mode === 'criar' && senha.length < 8) { setError('A senha precisa ter pelo menos 8 caracteres'); return }
+    if (!senha) { setError('Informe a senha'); return }
+    setBusy(true); setError(null)
     try {
-      await api('/api/auth/magic-link', { method: 'POST', json: { email: email.trim(), client: isNative() ? 'app' : 'web' } })
-      setState('sent')
+      if (mode === 'entrar') await entrar(email.trim(), senha)
+      else await registrar({ nome: nome.trim(), email: email.trim(), senha, nomeNegocio: nomeNegocio.trim() })
     } catch (err) {
-      setState('idle')
       setError(err instanceof ApiError ? err.message : 'Sem conexão')
+      setBusy(false)
     }
   }
 
-  const devLogin = async () => {
-    setError(null)
-    try { setToken((await api<{ token: string }>('/api/auth/dev', { method: 'POST', json: { email: email.trim() } })).token) }
-    catch (err) { setError(err instanceof ApiError ? err.message : 'Sem conexão') }
-  }
+  const swap = () => { setMode(mode === 'entrar' ? 'criar' : 'entrar'); setError(null) }
 
   return (
     <main className="auth">
       <div className="card auth-card">
         <div className="brand">
           <div className="brand-mark" aria-hidden="true"><i /></div>
-          <h1>Minhas contas</h1>
+          <h1>Kognit</h1>
         </div>
-        <p className="sec-sub">Entre com o e-mail cadastrado para a casa.</p>
-        {opts?.google && (
-          <button type="button" className="btn full" onClick={() => openExternal(googleStartUrl())}>Entrar com Google</button>
-        )}
-        {state === 'sent' ? (
-          <p className="auth-note">Link enviado para <b>{email.trim()}</b>. Abra o e-mail neste aparelho para entrar.</p>
-        ) : (
-          <form className="stack-sm" onSubmit={sendLink} noValidate>
-            <label className="fld"><span>E-mail</span>
-              <input className="input" type="email" autoComplete="email" inputMode="email" value={email}
-                onChange={e => { setEmail(e.target.value); setError(null) }} />
+        <p className="sec-sub">{mode === 'entrar' ? 'Entre para ver o caixa do seu negócio.' : 'Crie a conta do seu negócio.'}</p>
+        <form className="stack-sm" onSubmit={submit} noValidate>
+          {mode === 'criar' && <>
+            <label className="fld"><span>Seu nome</span>
+              <input className="input" autoComplete="name" maxLength={100} value={nome} onChange={e => { setNome(e.target.value); setError(null) }} />
             </label>
-            {(opts?.magicLink ?? true) && (
-              <button type="submit" className="btn primary full" disabled={state === 'sending'}>
-                {state === 'sending' ? 'Enviando…' : 'Receber link de acesso'}
-              </button>
-            )}
-            {opts?.dev && <button type="button" className="btn ghost full" onClick={devLogin}>Entrar sem link (desenvolvimento)</button>}
-          </form>
-        )}
+            <label className="fld"><span>Nome do negócio</span>
+              <input className="input" maxLength={100} placeholder="Ex.: Pet Shop Amigo Fiel" value={nomeNegocio} onChange={e => setNomeNegocio(e.target.value)} />
+            </label>
+          </>}
+          <label className="fld"><span>E-mail</span>
+            <input className="input" type="email" autoComplete="email" inputMode="email" value={email}
+              onChange={e => { setEmail(e.target.value); setError(null) }} />
+          </label>
+          <label className="fld"><span>Senha</span>
+            <input className="input" type="password" autoComplete={mode === 'entrar' ? 'current-password' : 'new-password'} value={senha}
+              onChange={e => { setSenha(e.target.value); setError(null) }} />
+          </label>
+          <button type="submit" className="btn primary full" disabled={busy}>
+            {busy ? (mode === 'entrar' ? 'Entrando…' : 'Criando…') : mode === 'entrar' ? 'Entrar' : 'Criar conta'}
+          </button>
+        </form>
+        {slow && <p className="auth-note">Ligando o servidor. Na primeira vez do dia isso pode levar até 1 minuto.</p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
+        <button type="button" className="link-btn auth-out" onClick={swap}>
+          {mode === 'entrar' ? 'Ainda não tem conta? Criar conta' : 'Já tenho conta. Entrar'}
+        </button>
       </div>
     </main>
   )

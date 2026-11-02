@@ -1,26 +1,12 @@
-import { isDate } from './format'
-
-/** Modo demonstração (npm run demo): o back é simulado no navegador (src/mock); nada sai para a rede. */
-export const DEMO = import.meta.env.VITE_DEMO === 'true'
-
-/** Endereço da API: VITE_API_URL no build (APK/web); vazio = mesma origem (proxy do Vite em desenvolvimento). */
+/** Endereço da API KOGNIT: VITE_API_URL no build (APK/web); vazio = mesma origem (proxy do Vite em desenvolvimento). */
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
 export class ApiError extends Error {
   readonly status: number
-  readonly field?: string
-  constructor(status: number, message: string, field?: string) {
+  constructor(status: number, message: string) {
     super(message)
     this.status = status
-    this.field = field
   }
-}
-
-/** Repassa ?hoje= (simulação de data, só aceita pela API em desenvolvimento). */
-function withToday(path: string) {
-  const q = new URLSearchParams(location.search).get('hoje')
-  if (!isDate(q)) return path
-  return path + (path.includes('?') ? '&' : '?') + 'hoje=' + q
 }
 
 let tokenGetter: () => string | null = () => null
@@ -28,6 +14,12 @@ let onUnauthorized: () => void = () => {}
 export function configureAuth(getToken: () => string | null, unauthorized: () => void) {
   tokenGetter = getToken
   onUnauthorized = unauthorized
+}
+
+/** Mensagem de erro da API (ProblemDetails): o primeiro erro de validação ou o título. */
+function problemMessage(j: { title?: string; errors?: Record<string, string[]> } | null): string | null {
+  const first = j?.errors && Object.values(j.errors).flat()[0]
+  return first || j?.title || null
 }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
@@ -41,26 +33,21 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   }
   let res: Response
   try {
-    const doFetch: (url: string, init: RequestInit) => Promise<Response> = DEMO ? (await import('../mock/server')).mockFetch : fetch
-    res = await doFetch(BASE + withToday(path), { ...init, headers, body })
+    res = await fetch(BASE + path, { ...init, headers, body })
   } catch {
     throw new ApiError(0, 'Sem conexão')
   }
-  if (res.status === 401) {
+  // 401 sem token é login recusado (a mensagem vem da API); com token, a sessão expirou
+  if (res.status === 401 && token) {
     onUnauthorized()
     throw new ApiError(401, 'Sessão expirada')
   }
   if (!res.ok) {
-    let msg = 'Não foi salvo · Tentar de novo', field: string | undefined
-    try {
-      const j = await res.json()
-      if (j?.error) msg = j.error
-      field = j?.field
-    } catch { /* corpo vazio */ }
-    throw new ApiError(res.status, msg, field)
+    let msg: string | null = null
+    try { msg = problemMessage(await res.json()) } catch { /* corpo vazio */ }
+    throw new ApiError(res.status, msg ?? 'Não foi salvo · Tentar de novo')
   }
+  if (res.status === 202 || res.status === 204) return null as T
   const type = res.headers.get('content-type') ?? ''
-  return (type.includes('application/json') ? res.json() : res.text()) as Promise<T>
+  return (type.includes('json') ? res.json() : res.text()) as Promise<T>
 }
-
-export const apiUrl = (path: string) => BASE + withToday(path)

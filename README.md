@@ -1,4 +1,31 @@
-# Kognit · Minhas contas
+# Kognit
+
+> **O front (`app/`) agora usa a [API KOGNIT](https://github.com/correaaugusto/KOGNIT)** (gestor do caixa do pequeno
+> negócio: extrato, contas a pagar, previsão de 30 dias com semáforo e "E se…?"). O `backend/` e o `contracts/`
+> deste repositório não são usados por ele. Veja **"Rodar o front com a API KOGNIT"** abaixo.
+>
+> O que mudou: login por e-mail e senha; as abas Visão geral, Extrato e Contas e previsão mostram os dados da API;
+> saíram a casa do casal, desfazer, importação CSV, Mercado Pago, captura de notificações e o modo demonstração
+> antigo (o banco de demonstração agora vem da API).
+
+## Rodar o front com a API KOGNIT
+
+Pré-requisitos: Node.js ≥ 22 e a API KOGNIT rodando em `http://localhost:5080`
+(`dotnet run --project src/Kognit.Api --urls http://localhost:5080` no repositório dela).
+
+```bash
+cd app
+npm ci
+npm run dev
+```
+
+Abra `http://localhost:5173`, crie uma conta e toque em **Usar banco de demonstração**. O Vite repassa `/api`
+para `http://localhost:5080`. Em produção (Vercel), defina `VITE_API_URL` com o endereço público da API
+(ex.: `https://kognit-api.onrender.com`) e libere o endereço do front no `Cors__Origens__0` da API.
+
+---
+
+Texto original do projeto (contas do casal), mantido como referência:
 
 Gestor de contas pessoais de um casal: saldo atual, extrato por dia com calendário, contas fixas
 (salário, mensais, parcelas) e projeção dos próximos 6 meses.
@@ -20,35 +47,8 @@ backend/      base do backend em C# (ASP.NET Core + PostgreSQL) pronta para rece
 docs/         especificação, arquitetura e decisões
 ```
 
-## Ver o front sem back (modo demonstração)
-
-Pré-requisito: Node.js ≥ 22. No PowerShell, se aparecer "a execução de scripts foi desabilitada neste sistema",
-use `npm.cmd` no lugar de `npm` (ex.: `npm.cmd ci`, `npm.cmd run demo`) ou rode no Prompt de Comando (`cmd`).
-
-```bash
-cd app
-npm ci
-npm run demo
-```
-
-Abra `http://localhost:5173`. O back é simulado dentro do navegador (`app/src/mock`), começa com o exemplo da
-seção 7.1 e guarda as mudanças só naquele navegador. Telas, lançamentos, contas fixas, desfazer e configurações
-funcionam; integrações (Pluggy, Mercado Pago, captura, CSV) respondem "indisponível". Para recomeçar do
-exemplo: Configurações › Casa › "Apagar minha conta e dados". O modo demonstração não entra no `npm run build`.
-
-## Rodar o front com um back
-
-Pré-requisito: Node.js ≥ 22 e um backend que cumpra o contrato rodando localmente.
-
-```bash
-cd app
-npm ci
-npm run dev
-```
-
-Por padrão o Vite repassa `/api` para `http://localhost:8000`. Para outro endereço, crie `app/.env.local`
-com `VITE_API_URL=https://endereco-do-back`. Para simular outra data (seção 7), abra
-`http://localhost:5173/?hoje=2026-10-29` (o back só aceita isso em desenvolvimento).
+No PowerShell, se aparecer "a execução de scripts foi desabilitada neste sistema", use `npm.cmd` no lugar de
+`npm` (ex.: `npm.cmd ci`, `npm.cmd run dev`) ou rode no Prompt de Comando (`cmd`).
 
 ```bash
 cd app

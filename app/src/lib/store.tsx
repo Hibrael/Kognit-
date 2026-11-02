@@ -1,33 +1,27 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { api, ApiError } from './api'
-import type { MutationResult, Recurring, Tx, TxType, UndoToken } from './types'
+import type { TipoLancamento } from './types'
 
 export type Tab = 'geral' | 'extrato' | 'projecao'
 
-/** Como o diálogo de lançamento abre: edição, confirmação de conta fixa ou novo (com data). */
-export type TxPreset =
-  | { kind: 'edit'; tx: Tx }
-  | { kind: 'confirm'; recurringId: string; k: string; name: string; type: TxType; category: string; amount: number }
-  | { kind: 'new'; date?: string; type?: TxType; description?: string; amount?: number; inboxId?: string }
+/** Como o diálogo de lançamento abre (sempre um lançamento novo: o que vem do banco não se edita). */
+export interface TxPreset { date?: string; tipo?: TipoLancamento }
 
 export interface AppState {
   version: number
   refresh: () => void
   tab: Tab
   go: (t: Tab) => void
-  /** Executa uma escrita: mostra o aviso com "Desfazer" (RF-15) ou "Não foi salvo · Tentar de novo" (16.1). */
-  mutate: (run: () => Promise<MutationResult>, opts?: { silent?: boolean }) => Promise<MutationResult | null>
-  undoLast: () => void
-  toast: (msg: string, undo?: UndoToken | null, retry?: () => void) => void
+  /** Executa uma escrita: mostra a mensagem e recarrega a tela, ou o erro com "Tentar de novo" (16.1). */
+  write: (run: () => Promise<unknown>, message: string) => Promise<boolean>
+  toast: (msg: string, retry?: () => void) => void
   openTx: (p: TxPreset) => void
-  openRec: (r?: Recurring) => void
+  openConta: () => void
   openSettings: () => void
   extMonth: string
   setExtMonth: (k: string) => void
   extDay: string | null
   setExtDay: (d: string | null) => void
-  projOpen: string | null
-  setProjOpen: (k: string | null) => void
   online: boolean
 }
 
@@ -49,35 +43,44 @@ export function usePref<T>(key: string, initial: T): [T, (v: T) => void] {
   return [v, set]
 }
 
-export interface ViewState<T> { data: T | null; error: string | null; loading: boolean; reload: () => void }
+export interface ViewState<T> { data: T | null; error: string | null; loading: boolean; slow: boolean; reload: () => void }
+
+/** Depois deste tempo sem resposta, avisa que o servidor pode estar ligando (Render grátis dorme sem uso). */
+export const SLOW_MS = 4_000
+/** O Render grátis leva até ~1 min para acordar: só desiste depois disso. */
+const TIMEOUT_MS = 90_000
 
 /**
- * Carrega uma tela da API (16.1): primeira carga com indicador por até 10 s, depois erro com "Tentar de novo";
- * recargas mantêm a tela anterior.
+ * Carrega uma tela da API (16.1): primeira carga com indicador (e aviso se demorar), depois erro com "Tentar de novo";
+ * recargas mantêm a tela anterior. `key` muda quando os dados pedidos mudam; `load` é opcional (padrão: GET key).
  */
-export function useView<T>(path: string | null): ViewState<T> {
+export function useView<T>(key: string | null, load?: () => Promise<T>): ViewState<T> {
   const { version } = useApp()
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [slow, setSlow] = useState(false)
   const [nonce, setNonce] = useState(0)
   const seq = useRef(0)
+  const loader = useRef(load)
+  loader.current = load
 
   useEffect(() => {
-    if (!path) return
+    if (!key) return
     const my = ++seq.current
     setLoading(true)
+    const slowTimer = setTimeout(() => { if (seq.current === my) setSlow(true) }, SLOW_MS)
     const timer = setTimeout(() => {
       if (seq.current === my) { setError('Não foi possível carregar'); setLoading(false) }
-    }, 10_000)
-    api<T>(path)
+    }, TIMEOUT_MS)
+    ;(loader.current ? loader.current() : api<T>(key))
       .then(d => { if (seq.current === my) { setData(d); setError(null) } })
       .catch((e: unknown) => {
         if (seq.current === my && !(e instanceof ApiError && e.status === 401)) setError('Não foi possível carregar')
       })
-      .finally(() => { clearTimeout(timer); if (seq.current === my) setLoading(false) })
-    return () => clearTimeout(timer)
-  }, [path, version, nonce])
+      .finally(() => { clearTimeout(timer); clearTimeout(slowTimer); if (seq.current === my) { setLoading(false); setSlow(false) } })
+    return () => { clearTimeout(timer); clearTimeout(slowTimer) }
+  }, [key, version, nonce])
 
-  return { data, error, loading, reload: () => setNonce(n => n + 1) }
+  return { data, error, loading, slow, reload: () => setNonce(n => n + 1) }
 }
