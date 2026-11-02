@@ -1,118 +1,123 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../lib/api'
-import { brl, isDate, parseMoney, plain } from '../lib/format'
-import { useApp, useView } from '../lib/store'
-import type { MutationResult, Settings } from '../lib/types'
+import { brl, parseMoney, plain } from '../lib/format'
+import { useApp } from '../lib/store'
+import type { Conexao, Provedores, Usuario } from '../lib/types'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
-import { Switch } from './common'
-import { CsvImportDialog } from './CsvImportDialog'
 
-/** Painel lateral de configurações (RF-14, 16.5). Seções extras (casa, integrações) entram por `children`. */
-export function SettingsSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children?: ReactNode }) {
+const when = (iso: string | null) => iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca'
+const STATUS: Record<Conexao['status'], string> = { conectando: 'conectando', conectado: 'conectado', atualizando: 'atualizando', erro: 'erro' }
+
+/** Painel lateral de configurações: dados do negócio, banco conectado e conta. */
+export function SettingsSheet({ open, me, onMeChanged, onSignOut, onClose }: {
+  open: boolean; me: Usuario; onMeChanged: (u: Usuario) => void; onSignOut: () => void; onClose: () => void
+}) {
   return (
-    <Dialog open={open} onClose={onClose} sheet title="Configurações" sub="Valem para toda a casa." labelledBy="setTitle">
-      <div className="dlg-body">{open && <SettingsBody />}{children}</div>
+    <Dialog open={open} onClose={onClose} sheet title="Configurações" sub={me.nomeNegocio || me.email} labelledBy="setTitle">
+      <div className="dlg-body">
+        {open && <>
+          <NegocioSection me={me} onMeChanged={onMeChanged} />
+          <BancoSection />
+          <section className="set-sec">
+            <h3>Conta</h3>
+            <p className="hint">Você entrou como {me.nome} ({me.email}).</p>
+            <div><button className="btn ghost" type="button" onClick={onSignOut}>Sair da conta</button></div>
+          </section>
+        </>}
+      </div>
     </Dialog>
   )
 }
 
-function SettingsBody() {
-  const { mutate, toast, version } = useApp()
-  const v = useView<Settings>('/api/settings')
-  const s = v.data
-  const [opening, setOpening] = useState('')
-  const [date, setDate] = useState('')
-  const file = useRef<HTMLInputElement>(null)
-  const [csvOpen, setCsvOpen] = useState(false)
-  useEffect(() => { if (s) { setOpening(plain(s.openingBalance)); setDate(s.openingDate) } }, [s, version])
-  if (!s) return <div className="state-loading"><span className="spinner" /></div>
+/** Nome do negócio, CPF do dono (reconhece as retiradas) e dinheiro vivo em caixa (PUT /api/usuario). */
+function NegocioSection({ me, onMeChanged }: { me: Usuario; onMeChanged: (u: Usuario) => void }) {
+  const { toast, refresh } = useApp()
+  const [nomeNegocio, setNomeNegocio] = useState(me.nomeNegocio)
+  const [cpf, setCpf] = useState(me.cpf ?? '')
+  const [caixa, setCaixa] = useState(plain(me.caixaDinheiro))
+  useEffect(() => { setNomeNegocio(me.nomeNegocio); setCpf(me.cpf ?? ''); setCaixa(plain(me.caixaDinheiro)) }, [me])
 
-  // mudanças aqui são desfeitas com Ctrl/⌘+Z, sem aviso (RF-15)
-  const save = (json: object) => mutate(() => api<MutationResult>('/api/settings', { method: 'PUT', json }), { silent: true })
-  const saveOpening = () => {
-    const n = parseMoney(opening)
-    if (Number.isFinite(n) && n !== s.openingBalance) save({ openingBalance: n })
-    else setOpening(plain(s.openingBalance))
+  const save = async (json: object) => {
+    try { onMeChanged(await api<Usuario>('/api/usuario', { method: 'PUT', json })); refresh(); toast('Salvo') }
+    catch (e) { toast(e instanceof ApiError ? e.message : 'Não foi salvo') }
   }
-  const saveDate = () => {
-    const y = Number(date.slice(0, 4))
-    if (isDate(date) && y >= 2000 && y <= 2100 && date !== s.openingDate) save({ openingDate: date })
-    else setDate(s.openingDate)
+  const saveCaixa = () => {
+    const n = parseMoney(caixa)
+    if (Number.isFinite(n) && n !== me.caixaDinheiro) void save({ caixaDinheiro: n })
+    else setCaixa(plain(me.caixaDinheiro))
   }
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') e.currentTarget.blur() }
 
-  const exportJson = async () => {
-    try {
-      const data = await api<unknown>('/api/export')
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = `minhas-contas-${new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())}.json`
-      document.body.append(a); a.click(); a.remove()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-      try { localStorage.setItem('minhascontas:lastBackup', String(Date.now())) } catch { /* sem armazenamento */ }
-      toast('Arquivo JSON exportado')
-    } catch { toast('Não foi possível exportar') }
-  }
-  const importJson = async (f: File) => {
-    const text = await f.text()
-    try {
-      const c = await api<{ transactions: number; recurring: number }>('/api/import?dryRun=true', { method: 'POST', body: text, headers: { 'Content-Type': 'application/json' } })
-      if (!confirm(`Isto substitui ${c.transactions} lançamentos e ${c.recurring} contas fixas. Continuar?`)) return
-      await mutate(() => api<MutationResult>('/api/import', { method: 'POST', body: text, headers: { 'Content-Type': 'application/json' } }))
-    } catch (e) { toast(e instanceof ApiError ? e.message : 'Arquivo não reconhecido') }
-  }
-
-  const mode = s.titheBase
   return (
-    <>
-      <section className="set-sec">
-        <h3>Saldo inicial</h3>
-        <p className="hint">Quanto havia na conta no início do controle. O saldo atual é este valor mais os lançamentos a partir desta data.</p>
-        <div className="grid2">
-          <label className="fld"><span>Valor (R$)</span>
-            <input className="input num" inputMode="decimal" value={opening} onChange={e => setOpening(e.target.value)} onBlur={saveOpening}
-              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
-          </label>
-          <label className="fld"><span>Em</span>
-            <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} onBlur={saveDate} />
-          </label>
+    <section className="set-sec">
+      <h3>Seu negócio</h3>
+      <label className="fld"><span>Nome do negócio</span>
+        <input className="input" maxLength={100} value={nomeNegocio} onChange={e => setNomeNegocio(e.target.value)} onKeyDown={blurOnEnter}
+          onBlur={() => { if (nomeNegocio.trim() !== me.nomeNegocio) void save({ nomeNegocio: nomeNegocio.trim() }) }} />
+      </label>
+      <div className="grid2">
+        <label className="fld"><span>Seu CPF (opcional)</span>
+          <input className="input num" inputMode="numeric" maxLength={14} value={cpf} onChange={e => setCpf(e.target.value)} onKeyDown={blurOnEnter}
+            onBlur={() => { if (cpf.trim() !== (me.cpf ?? '')) void save({ cpf: cpf.trim() }) }} />
+        </label>
+        <label className="fld"><span>Dinheiro vivo em caixa (R$)</span>
+          <input className="input num" inputMode="decimal" value={caixa} onChange={e => setCaixa(e.target.value)} onKeyDown={blurOnEnter} onBlur={saveCaixa} />
+        </label>
+      </div>
+      <p className="hint">Com o CPF, um Pix da conta do negócio para você vira "retirada" sozinho.</p>
+    </section>
+  )
+}
+
+/** Bancos conectados: banco de demonstração, "Atualizar agora" e desconectar (/api/conexoes). */
+function BancoSection() {
+  const { toast, refresh, version } = useApp()
+  const [items, setItems] = useState<Conexao[] | null>(null)
+  const [prov, setProv] = useState<Provedores | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(() => {
+    api<Conexao[]>('/api/conexoes').then(setItems).catch(() => setItems([]))
+    api<Provedores>('/api/conexoes/provedores').then(setProv).catch(() => setProv(null))
+  }, [])
+  useEffect(load, [load, version])
+
+  const run = async (f: () => Promise<unknown>, msg: string) => {
+    setBusy(true)
+    try { await f(); toast(msg); load(); refresh() }
+    catch (e) { toast(e instanceof ApiError ? e.message : 'Sem conexão') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <section className="set-sec">
+      <h3>Banco conectado</h3>
+      <p className="hint">Com o banco conectado (Open Finance), vendas, gastos, retiradas e contas fixas entram sozinhos, já organizados.</p>
+      {items?.map(c => (
+        <div key={c.id} className="int-item">
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <b>{c.nomeBanco}</b>
+            <span className={'pill' + (c.status === 'erro' ? ' late' : c.status === 'conectado' ? ' ok' : '')}>{STATUS[c.status]}</span>
+          </div>
+          <small>saldo {brl(c.saldoContas)} · atualizado em {when(c.ultimaSincronizacao)}</small>
+          {c.mensagem && <small className="int-error">{c.mensagem}</small>}
+          <div className="row">
+            <button className="btn sm" type="button" disabled={busy}
+              onClick={() => run(() => api(`/api/conexoes/${c.id}/sincronizar`, { method: 'POST' }), 'Atualizando. Os dados novos aparecem em alguns segundos.')}>
+              <Icon name="rotate" />Atualizar agora
+            </button>
+            <button className="btn ghost sm" type="button" disabled={busy}
+              onClick={() => run(() => api(`/api/conexoes/${c.id}`, { method: 'DELETE' }), 'Banco desconectado')}><Icon name="trash" />Desconectar</button>
+          </div>
         </div>
-      </section>
-      <section className="set-sec">
-        <h3>Devolução (10%)</h3>
-        <div className="switch-row">
-          <span className={mode === 'liquido' ? 'on' : ''}>Sobre o líquido</span>
-          <Switch checked={mode === 'bruto'} label="Calcular a devolução sobre o salário bruto"
-            onChange={b => save({ titheBase: b ? 'bruto' : 'liquido' })} />
-          <span className={mode === 'bruto' ? 'on' : ''}>Sobre o bruto</span>
-        </div>
-        <div className="cmp">
-          <div className={'cmp-row' + (mode === 'liquido' ? ' on' : '')}><span>Sobre o líquido<small>10% de {brl(s.netTotal)}</small></span><span className="num">{brl(s.netTotal * 0.1)}/mês</span></div>
-          <div className={'cmp-row' + (mode === 'bruto' ? ' on' : '')}><span>Sobre o bruto<small>10% de {brl(s.grossTotal)}</small></span><span className="num">{brl(s.grossTotal * 0.1)}/mês</span></div>
-        </div>
-        <p className="hint">Vale para a conta fixa "Devolução 10%". A 1ª parcela do 13º não tem descontos e entra igual nos dois modos.</p>
-      </section>
-      <section className="set-sec">
-        <h3>Dados</h3>
-        <p className="hint">Exporte um backup de vez em quando: o servidor não guarda cópias automáticas.</p>
-        <div className="row" style={{ flexWrap: 'wrap' }}>
-          <button className="btn" type="button" onClick={exportJson}><Icon name="download" />Exportar JSON</button>
-          <button className="btn" type="button" onClick={() => file.current?.click()}><Icon name="upload" />Importar JSON</button>
-          <button className="btn" type="button" onClick={() => setCsvOpen(true)}><Icon name="upload" />Importar extrato CSV/XLSX</button>
-          <input ref={file} type="file" accept="application/json,.json" hidden
-            onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importJson(f) }} />
-        </div>
-        <div className="row" style={{ flexWrap: 'wrap' }}>
-          <button className="btn ghost" type="button" disabled={!s.hasSampleTx}
-            onClick={() => mutate(() => api<MutationResult>('/api/sample/clear', { method: 'POST' }))}><Icon name="trash" />Apagar lançamentos de exemplo</button>
-          {s.canRestoreSample && (
-            <button className="btn ghost" type="button"
-              onClick={() => mutate(() => api<MutationResult>('/api/sample/restore', { method: 'POST' }))}><Icon name="rotate" />Restaurar exemplo</button>
-          )}
-        </div>
-      </section>
-      <CsvImportDialog open={csvOpen} onClose={() => setCsvOpen(false)} />
-    </>
+      ))}
+      {items && !items.length && <p className="hint">Nenhum banco conectado.</p>}
+      {prov?.demoHabilitado && !items?.some(c => c.provedor === 'demo') && (
+        <div><button className="btn" type="button" disabled={busy}
+          onClick={() => run(() => api('/api/conexoes/demo', { method: 'POST' }), 'Banco de demonstração conectado')}>Usar banco de demonstração</button></div>
+      )}
+      {prov && !prov.pluggyConfigurado && <p className="hint">A conexão com bancos reais (Pluggy) ainda não foi configurada no servidor.</p>}
+    </section>
   )
 }

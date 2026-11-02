@@ -1,128 +1,147 @@
-import { useState } from 'react'
 import { api } from '../lib/api'
-import { brl, brlS, dShort, dateFor, dayOf, mLabel, mLabelY, mName, plain } from '../lib/format'
+import { brl, dShort, mName, monthOf, plain, todaySP } from '../lib/format'
 import { useApp, useView } from '../lib/store'
-import type { Bill, MutationResult, Overview as OverviewData } from '../lib/types'
+import type { Alerta, Conta, Painel, Semaforo } from '../lib/types'
 import { Icon } from '../ui/Icon'
 import { TxRow, ViewGate } from '../ui/common'
 
-/** Lembrete mensal de backup (16.4): sem exportação nos últimos 30 dias. */
-function needsBackup() {
-  try {
-    const last = Number(localStorage.getItem('minhascontas:lastBackup') || 0)
-    return Date.now() - last > 30 * 864e5
-  } catch { return false }
+/** Situação da conta a pagar, no estilo das pílulas do protótipo. */
+export function ContaPill({ c }: { c: Conta }) {
+  if (c.paga) return <span className="pill ok">Paga{c.pagaEm ? ` ${dShort(c.pagaEm)}` : ''}</span>
+  if (c.situacao === 'atrasada') return <span className="pill late">Atrasada · {dShort(c.vencimento)}</span>
+  if (c.situacao === 'venceHoje') return <span className="pill late">Vence hoje</span>
+  return <span className="pill">{dShort(c.vencimento)}</span>
 }
 
-/** Visão geral (4.3, 6.6): quatro números, "A pagar e a receber" e "Últimos lançamentos". */
+/** Semáforo da previsão de 30 dias (verde / amarelo / vermelho). */
+export function SemaforoCard({ s, action }: { s: Semaforo; action?: React.ReactNode }) {
+  return (
+    <div className="card sem" role="status">
+      <span className={'sem-dot ' + s.cor} aria-hidden="true" />
+      <div className="sem-txt"><b>{s.titulo}</b><p>{s.texto}</p></div>
+      {action}
+    </div>
+  )
+}
+
+function AlertaRow({ a }: { a: Alerta }) {
+  return (
+    <div className="li wrap">
+      <div className="d">
+        <span>{a.titulo}</span>
+        <small>{a.texto}</small>
+        {a.sugestao && <small className="sug">{a.sugestao}</small>}
+      </div>
+      <div className="r">{a.nivel === 'alto' ? <span className="pill late">importante</span> : a.nivel === 'medio' ? <span className="pill">atenção</span> : null}</div>
+    </div>
+  )
+}
+
+/** Visão geral: semáforo, quatro números, "Precisa de atenção", contas a pagar e últimas movimentações (GET /api/painel). */
 export function Overview() {
-  const v = useView<OverviewData>('/api/overview')
-  const { go, openTx, mutate, setProjOpen, openSettings } = useApp()
-  const [showDone, setShowDone] = useState(false)
+  const v = useView<Painel>('/api/painel')
+  const { go, write, openSettings, openConta } = useApp()
   const d = v.data
 
   return (
     <ViewGate loading={v.loading} error={v.error} hasData={!!d} reload={v.reload}>
       {d && (() => {
-        const mes = mName(d.cur)
-        const done = d.bills.filter(b => b.txId).length
-        const pend = d.bills.length - done
-        const skip = (b: Bill) => mutate(() => api<MutationResult>(`/api/recurring/${b.recurringId}/skip`, { method: 'POST', json: { month: b.k } }))
-        const confirm = (b: Bill) => openTx({ kind: 'confirm', recurringId: b.recurringId, k: b.k, name: b.name, type: b.type, category: b.category, amount: b.amount })
-        const plural = (n: number) => `${n} ${n === 1 ? 'lançamento' : 'lançamentos'}`
+        const mes = mName(monthOf(todaySP()))
+        const semDados = !d.conexoes.length && !d.ultimasMovimentacoes.length
+        const pagar = (c: Conta) => write(() => api(`/api/contas/${c.id}/pagar`, { method: 'POST' }), `${c.descricao} marcada como paga`)
+        const aPagar = d.proximasContas.filter(c => !c.paga)
         return (
           <section className="stack" aria-label="Visão geral">
-            {!d.hasRecurring && (
-              <div className="card empty state">
-                Comece cadastrando seu salário e suas contas fixas ·{' '}
-                <button type="button" className="link-btn" onClick={() => go('projecao')}>Ir para Fixos</button>
+            {semDados && (
+              <div className="card reminder">
+                <span>Conecte o banco do negócio para as movimentações entrarem sozinhas, já organizadas.</span>
+                <span className="row">
+                  <button type="button" className="btn sm"
+                    onClick={() => write(() => api('/api/conexoes/demo', { method: 'POST' }), 'Banco de demonstração conectado')}>Usar banco de demonstração</button>
+                  <button type="button" className="btn sm ghost" onClick={openSettings}>Conectar banco</button>
+                </span>
               </div>
             )}
-            {needsBackup() && (
-              <div className="card reminder">
-                <span>Faça um backup (Exportar JSON): o servidor não guarda cópias automáticas.</span>
-                <button type="button" className="btn sm" onClick={openSettings}>Exportar</button>
-              </div>
+            {!semDados && (
+              <SemaforoCard s={d.semaforo}
+                action={<button type="button" className="link-btn" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }} onClick={() => go('projecao')}>ver previsão</button>} />
             )}
             <div className="kpis">
               <article className="card kpi">
                 <div className="kpi-label">Saldo atual</div>
-                <div className="kpi-value hero num">{brl(d.balance)}</div>
-                <div className="kpi-sub">previsto para {dShort(dateFor(d.cur, 31))}: <b className="num">{brl(d.endOfMonth)}</b></div>
+                <div className="kpi-value hero num">{brl(d.saldo)}</div>
+                <div className="kpi-sub">menor saldo em 30 dias: <b className="num">{brl(d.semaforo.menorSaldo)}</b> em {dShort(d.semaforo.diaMenorSaldo)}</div>
               </article>
               <article className="card kpi">
                 <div className="kpi-label">Entrou em {mes}</div>
-                <div className="kpi-value num">{brl(d.monthIn)}</div>
-                <div className="kpi-sub">{plural(d.nIn)}{d.toReceive > 0 && <> · <b className="num">{brl(d.toReceive)}</b> a receber</>}</div>
+                <div className="kpi-value num">{brl(d.mes.entrou)}</div>
+                <div className="kpi-sub">hoje: <b className="num">{brl(d.hoje.entrou)}</b></div>
               </article>
               <article className="card kpi">
                 <div className="kpi-label">Saiu em {mes}</div>
-                <div className="kpi-value num">{brl(d.monthOut)}</div>
-                <div className="kpi-sub">{plural(d.nOut)}{d.toPay > 0 && <> · <b className="num">{brl(d.toPay)}</b> a pagar</>}</div>
+                <div className="kpi-value num">{brl(d.mes.saiu)}</div>
+                <div className="kpi-sub">hoje: <b className="num">{brl(d.hoje.saiu)}</b></div>
               </article>
               <article className="card kpi">
-                <div className="kpi-label">Sobra em {mName(d.nextMonth)}</div>
-                <div className={'kpi-value num ' + (d.nextNet >= 0 ? 'pos' : '')}>{brlS(d.nextNet)}</div>
-                <div className="kpi-sub">
-                  {d.nextNet >= 0 ? 'prevista com salário e fixos · ' : 'falta prevista · '}
-                  <button type="button" className="link-btn" onClick={() => { setProjOpen(null); go('projecao') }}>ver projeção</button>
-                </div>
+                <div className="kpi-label">Lucro em {mes}</div>
+                <div className={'kpi-value num ' + (d.mes.lucro >= 0 ? 'pos' : '')}>{brl(d.mes.lucro)}</div>
+                <div className="kpi-sub">você retirou <b className="num">{brl(d.mes.praMim)}</b> para você</div>
               </article>
             </div>
+
+            {!!d.alertas.length && (
+              <div className="card">
+                <div className="sec-head"><div><h2 className="sec-title">Precisa de atenção</h2></div></div>
+                <div className="list">{d.alertas.map(a => <AlertaRow key={a.id} a={a} />)}</div>
+              </div>
+            )}
 
             <div className="cols">
               <div className="card">
                 <div className="sec-head">
                   <div>
-                    <h2 className="sec-title">A pagar e a receber</h2>
+                    <h2 className="sec-title">Contas a pagar</h2>
                     <p className="sec-sub">
-                      {!d.bills.length ? (d.hasRecurring ? 'Nada pendente neste mês.' : 'Nenhuma conta fixa cadastrada.')
-                        : pend ? `${pend} ${pend === 1 ? 'conta pendente' : 'contas pendentes'} em ${mes}` : `Tudo em dia em ${mes}`}
+                      {d.hoje.venceAmanha.length ? `Amanhã vence: ${d.hoje.venceAmanha.map(c => `${c.descricao} ${brl(c.valor)}`).join(' · ')}`
+                        : aPagar.length ? `${aPagar.length} ${aPagar.length === 1 ? 'conta' : 'contas'} nos próximos dias` : 'Nada a pagar nos próximos dias'}
                     </p>
                   </div>
+                  <button className="btn sm" type="button" onClick={openConta}><Icon name="plus" />Conta</button>
                 </div>
                 <div className="list">
-                  {d.bills.filter(b => !b.txId || showDone).map(b => {
-                    const isIn = b.type === 'in'
-                    const status = b.txId ? <span className="pill ok">{isIn ? 'Recebido' : 'Pago'} {dShort(b.txDate!)}</span>
-                      : b.overdue ? <span className="pill late">{b.k < d.cur ? `Atrasada · ${mLabel(b.k).toLowerCase()}` : `Atrasada · dia ${dayOf(b.due)}`}</span>
-                      : b.dueToday ? <span className="pill late">Vence hoje</span>
-                      : <span className="pill">Dia {dayOf(b.due)}</span>
-                    return (
-                      <div key={b.recurringId + b.k} className={'li' + (b.txId ? ' done' : '')}>
-                        <div className="d"><span>{b.name}</span><small>{isIn ? 'Entrada fixa' : b.category}</small></div>
-                        <div className="r">
-                          {status}
-                          <span className={'amt ' + (b.txId ? 'muted' : isIn ? 'in' : '')}>{(isIn ? '+' : '−') + plain(b.amount)}</span>
-                          {b.txId ? <span style={{ width: 58 }} /> : (
-                            <span className="row" style={{ gap: 2 }}>
-                              <button type="button" className="icon-btn sm" title={`Ignorar em ${mLabelY(b.k)} (não vai acontecer ou já está no saldo)`}
-                                aria-label={`Ignorar ${b.name} em ${mLabelY(b.k)}`} onClick={() => skip(b)}><Icon name="x" /></button>
-                              <button type="button" className="icon-btn sm" title={isIn ? 'Confirmar recebimento' : 'Confirmar pagamento'}
-                                aria-label={`Confirmar ${b.name}`} onClick={() => confirm(b)}><Icon name="check" /></button>
-                            </span>
-                          )}
-                        </div>
+                  {d.proximasContas.map(c => (
+                    <div key={c.id} className={'li' + (c.paga ? ' done' : '')}>
+                      <div className="d"><span>{c.descricao}</span><small>{c.categoria}{c.recorrente ? ' · todo mês' : ''}</small></div>
+                      <div className="r">
+                        <ContaPill c={c} />
+                        <span className={'amt ' + (c.paga ? 'muted' : '')}>−{plain(c.valor)}</span>
+                        {c.paga ? <span style={{ width: 28 }} /> : (
+                          <button type="button" className="icon-btn sm" title="Marcar como paga" aria-label={`Marcar ${c.descricao} como paga`} onClick={() => pagar(c)}>
+                            <Icon name="check" />
+                          </button>
+                        )}
                       </div>
-                    )
-                  })}
-                  {!d.bills.length && <div className="empty">{d.hasRecurring ? 'As contas fixas deste mês vencem antes do saldo inicial ou foram ignoradas.' : 'Cadastre salário e contas fixas em "Fixos e projeção".'}</div>}
-                  {!!d.bills.length && !pend && !showDone && <div className="empty">Tudo em dia em {mes}</div>}
+                    </div>
+                  ))}
+                  {!d.proximasContas.length && <div className="empty">Nenhuma conta cadastrada. As contas fixas aparecem sozinhas quando o banco está conectado.</div>}
                 </div>
                 <div className="card-foot">
-                  <span>Falta pagar <b className="num">{brl(d.pOut)}</b> · receber <b className="num">{brl(d.pIn)}</b></span>
-                  {done > 0 && <button type="button" className="link-btn" onClick={() => setShowDone(!showDone)}>{showDone ? 'Ocultar confirmadas' : `Ver ${done} confirmadas`}</button>}
+                  <span>Falta pagar <b className="num">{brl(aPagar.reduce((s, c) => s + c.valor, 0))}</b></span>
+                  <button type="button" className="link-btn" onClick={() => go('projecao')}>Ver todas</button>
                 </div>
               </div>
 
               <div className="card">
                 <div className="sec-head">
-                  <div><h2 className="sec-title">Últimos lançamentos</h2></div>
+                  <div>
+                    <h2 className="sec-title">Últimas movimentações</h2>
+                    {d.paraConferir > 0 && <p className="sec-sub">{d.paraConferir} {d.paraConferir === 1 ? 'movimentação' : 'movimentações'} para conferir</p>}
+                  </div>
                   <button className="btn sm" type="button" onClick={() => go('extrato')}>Ver extrato</button>
                 </div>
                 <div className="list">
-                  {d.recent.length ? d.recent.map(t => <TxRow key={t.id} t={t} showDate today={d.today} />)
-                    : <div className="empty">Nenhum lançamento ainda. Use o botão "Lançamento".</div>}
+                  {d.ultimasMovimentacoes.length ? d.ultimasMovimentacoes.map(t => <TxRow key={t.id} t={t} showDate />)
+                    : <div className="empty">Nenhuma movimentação ainda. Use o botão "Lançamento" para anotar dinheiro vivo.</div>}
                 </div>
               </div>
             </div>
